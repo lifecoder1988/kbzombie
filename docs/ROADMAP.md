@@ -32,6 +32,7 @@
 | 1.5 | Input Manager | 键盘输入抽象 | 中文输入法干扰处理；按键去重；与游戏逻辑解耦 |
 | 1.6 | Audio Manager | 音效播放管理 | 预加载；play/stop；连续触发防叠加 |
 | 1.7 | Asset Loader | 资源预加载 | 图片 + 音效统一加载；进度回调；加载完才进游戏 |
+| 1.8 | Collision Detection | AABB 碰撞检测 | 无状态纯函数 `intersects`；`Rect` 接口；引擎层通用能力 |
 
 ### 模块依赖关系
 
@@ -62,8 +63,10 @@
 - [x] 按 ESC → 切回主菜单
 
 > **已完成** — 7 个引擎模块 + 32 个单元测试 + Demo 验收场景。详见 `docs/plans/2026-04-13-stage1-game-engine.md`。
+>
+> **阶段二前引擎升级** — 新增 AABB 碰撞检测模块（`intersects` 纯函数 + `Rect` 接口）、优化 `EntityManager.getByTag` 为懒重建缓存避免每帧分配数组、升级 Demo 演示全部引擎特性（Entity 接口、EntityManager 生命周期、RenderLayer 分层、tag 查询、碰撞检测）。48 个单元测试。详见 `docs/plans/2026-04-13-engine-upgrade-for-stage2.md`。
 
-**验收原则**：没有任何真实游戏逻辑，但引擎骨架完整——循环在跑、场景能切、实体能增删、输入能收到、画面能画出来。
+**验收原则**：没有任何真实游戏逻辑，但引擎骨架完整——循环在跑、场景能切、实体能增删、输入能收到、画面能画出来、碰撞能检测。
 
 ---
 
@@ -213,3 +216,4 @@
 | ROADMAP.md（本文档） | 开发路线图与进度跟踪 |
 | [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) | 测试策略（四层测试、无头集成、AI 测试流程） |
 | [plans/2026-04-13-stage1-game-engine.md](./plans/2026-04-13-stage1-game-engine.md) | 阶段一实现计划（已完成） |
+| [plans/2026-04-13-engine-upgrade-for-stage2.md](./plans/2026-04-13-engine-upgrade-for-stage2.md) | 阶段二前引擎升级设计（已完成） |
