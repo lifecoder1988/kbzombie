@@ -64,3 +64,11 @@ export interface LoadedAssets {
 
 /** 资源加载进度回调 */
 export type AssetProgressCallback = (loaded: number, total: number) => void
+
+/** 轴对齐矩形，用于碰撞检测 */
+export interface Rect {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
