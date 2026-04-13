@@ -4,6 +4,9 @@ import type { Entity } from './types'
 export class EntityManager {
   private entities: Entity[] = []
   private toAdd: Entity[] = []
+  private renderList: Entity[] = []
+  private renderDirty = true
+  private activeCount = 0
 
   /** 添加实体（在当前帧末尾实际加入，避免遍历中修改列表） */
   add(entity: Entity): void {
@@ -13,6 +16,7 @@ export class EntityManager {
   /** 移除实体（标记为 inactive，下次 cleanup 时删除） */
   remove(entity: Entity): void {
     entity.active = false
+    this.renderDirty = true
   }
 
   /** 更新所有活跃实体 */
@@ -26,12 +30,13 @@ export class EntityManager {
     this.cleanup()
   }
 
-  /** 按层级顺序渲染所有活跃实体 */
+  /** 按层级顺序渲染所有活跃实体（仅在实体增删时重建渲染列表） */
   render(ctx: CanvasRenderingContext2D): void {
-    const sorted = this.entities.filter(e => e.active)
-    sorted.sort((a, b) => a.layer - b.layer)
-    for (let i = 0; i < sorted.length; i++) {
-      sorted[i].render(ctx)
+    if (this.renderDirty) {
+      this.rebuildRenderList()
+    }
+    for (let i = 0; i < this.renderList.length; i++) {
+      this.renderList[i].render(ctx)
     }
   }
 
@@ -42,13 +47,16 @@ export class EntityManager {
 
   /** 获取所有活跃实体数量 */
   get count(): number {
-    return this.entities.filter(e => e.active).length
+    return this.activeCount
   }
 
   /** 清空所有实体 */
   clear(): void {
     this.entities.length = 0
     this.toAdd.length = 0
+    this.renderList.length = 0
+    this.renderDirty = false
+    this.activeCount = 0
   }
 
   private flush(): void {
@@ -57,6 +65,7 @@ export class EntityManager {
         this.entities.push(this.toAdd[i])
       }
       this.toAdd.length = 0
+      this.renderDirty = true
     }
   }
 
@@ -68,6 +77,21 @@ export class EntityManager {
         write++
       }
     }
+    if (write !== this.entities.length) {
+      this.renderDirty = true
+    }
     this.entities.length = write
+    this.activeCount = write
+  }
+
+  private rebuildRenderList(): void {
+    this.renderList.length = 0
+    for (let i = 0; i < this.entities.length; i++) {
+      if (this.entities[i].active) {
+        this.renderList.push(this.entities[i])
+      }
+    }
+    this.renderList.sort((a, b) => a.layer - b.layer)
+    this.renderDirty = false
   }
 }

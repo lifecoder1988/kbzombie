@@ -12,6 +12,7 @@ export class InputManager {
     target.addEventListener('keyup', this.onKeyUp as EventListener)
     target.addEventListener('compositionstart', this.onCompositionStart as EventListener)
     target.addEventListener('compositionend', this.onCompositionEnd as EventListener)
+    target.addEventListener('blur', this.onBlur as EventListener)
   }
 
   detach(target: EventTarget): void {
@@ -19,6 +20,7 @@ export class InputManager {
     target.removeEventListener('keyup', this.onKeyUp as EventListener)
     target.removeEventListener('compositionstart', this.onCompositionStart as EventListener)
     target.removeEventListener('compositionend', this.onCompositionEnd as EventListener)
+    target.removeEventListener('blur', this.onBlur as EventListener)
   }
 
   /** 注册监听器 */
@@ -77,5 +79,9 @@ export class InputManager {
 
   private onCompositionEnd = (): void => {
     this.composing = false
+  }
+
+  private onBlur = (): void => {
+    this.pressedKeys.clear()
   }
 }

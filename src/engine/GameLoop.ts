@@ -59,9 +59,11 @@ export class GameLoop {
     }
   }
 
+  private static readonly MAX_DT = 200
+
   private loop(now: number): void {
     if (!this.running) return
-    const dt = now - this.lastTime
+    const dt = Math.min(now - this.lastTime, GameLoop.MAX_DT)
     this.lastTime = now
     if (this.target) {
       if (!this.paused) {

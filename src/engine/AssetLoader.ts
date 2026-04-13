@@ -6,6 +6,11 @@ export class AssetLoader {
   private audioBuffers: Map<string, AudioBuffer> = new Map()
   private audioContext: AudioContext | null = null
 
+  /** 注入共享的 AudioContext（避免多个模块各建一个） */
+  setAudioContext(ctx: AudioContext): void {
+    this.audioContext = ctx
+  }
+
   async load(manifest: AssetManifest, onProgress?: AssetProgressCallback): Promise<LoadedAssets> {
     const imageEntries = Object.entries(manifest.images)
     const audioEntries = Object.entries(manifest.audio)
@@ -42,15 +47,19 @@ export class AssetLoader {
   }
 
   private async loadImage(id: string, url: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => {
-        this.images.set(id, img)
-        resolve()
-      }
-      img.onerror = () => reject(new Error(`Failed to load image: ${id} (${url})`))
-      img.src = url
-    })
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => {
+          this.images.set(id, img)
+          resolve()
+        }
+        img.onerror = () => reject(new Error(`Failed to load image: ${id} (${url})`))
+        img.src = url
+      })
+    } catch (e) {
+      console.warn(`Failed to load image: ${id} (${url})`, e)
+    }
   }
 
   private async loadAudio(id: string, url: string): Promise<void> {

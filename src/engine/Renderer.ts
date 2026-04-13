@@ -32,12 +32,13 @@ export class Renderer {
   }
 
   resize(width?: number, height?: number): void {
-    if (this.canvas) {
-      this.width = width ?? this.canvas.clientWidth
-      this.height = height ?? this.canvas.clientHeight
-      this.canvas.width = this.width
-      this.canvas.height = this.height
-    }
+    if (!this.canvas || !this.ctx) return
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1
+    this.width = width ?? this.canvas.clientWidth
+    this.height = height ?? this.canvas.clientHeight
+    this.canvas.width = this.width * dpr
+    this.canvas.height = this.height * dpr
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }
 
   submit(command: RenderCommand): void {
