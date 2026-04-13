@@ -109,4 +109,79 @@ describe('EntityManager', () => {
 
     expect(laterUpdated).toBe(true)
   })
+
+  it('getByTag 不存在的 tag 返回空数组', () => {
+    const mgr = new EntityManager()
+    mgr.add(createEntity({ tags: new Set(['a']) }))
+    mgr.update(0)
+
+    const result = mgr.getByTag('nonexistent')
+    expect(result).toHaveLength(0)
+  })
+
+  it('getByTag 返回的数组在实体不变时是同一个引用（缓存复用）', () => {
+    const mgr = new EntityManager()
+    mgr.add(createEntity({ tags: new Set(['enemy']) }))
+    mgr.update(0)
+
+    const first = mgr.getByTag('enemy')
+    const second = mgr.getByTag('enemy')
+    expect(first).toBe(second)
+  })
+
+  it('getByTag 在实体变化后正确更新缓存', () => {
+    const mgr = new EntityManager()
+    const e1 = createEntity({ tags: new Set(['enemy']) })
+    mgr.add(e1)
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(1)
+
+    mgr.add(createEntity({ tags: new Set(['enemy']) }))
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(2)
+  })
+
+  it('getByTag 在实体移除后正确更新缓存', () => {
+    const mgr = new EntityManager()
+    const e1 = createEntity({ tags: new Set(['enemy']) })
+    const e2 = createEntity({ tags: new Set(['enemy']) })
+    mgr.add(e1)
+    mgr.add(e2)
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(2)
+
+    mgr.remove(e1)
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(1)
+  })
+
+  it('getByTag 在 clear 后返回空数组', () => {
+    const mgr = new EntityManager()
+    mgr.add(createEntity({ tags: new Set(['enemy']) }))
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(1)
+
+    mgr.clear()
+
+    expect(mgr.getByTag('enemy')).toHaveLength(0)
+  })
+
+  it('getByTag 不包含已被直接设为 inactive 的实体', () => {
+    const mgr = new EntityManager()
+    const e1 = createEntity({ tags: new Set(['enemy']) })
+    mgr.add(e1)
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(1)
+
+    e1.active = false
+    mgr.update(0)
+
+    expect(mgr.getByTag('enemy')).toHaveLength(0)
+  })
 })
