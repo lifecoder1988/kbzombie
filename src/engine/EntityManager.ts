@@ -7,6 +7,8 @@ export class EntityManager {
   private renderList: Entity[] = []
   private renderDirty = true
   private activeCount = 0
+  private tagCache = new Map<string, Entity[]>()
+  private tagCacheDirty = true
 
   /** 添加实体（在当前帧末尾实际加入，避免遍历中修改列表） */
   add(entity: Entity): void {
@@ -17,6 +19,7 @@ export class EntityManager {
   remove(entity: Entity): void {
     entity.active = false
     this.renderDirty = true
+    this.tagCacheDirty = true
   }
 
   /** 更新所有活跃实体 */
@@ -41,8 +44,11 @@ export class EntityManager {
   }
 
   /** 按 tag 查询实体 */
-  getByTag(tag: string): Entity[] {
-    return this.entities.filter(e => e.active && e.tags.has(tag))
+  getByTag(tag: string): ReadonlyArray<Entity> {
+    if (this.tagCacheDirty) {
+      this.rebuildTagCache()
+    }
+    return this.tagCache.get(tag) ?? EMPTY_ARRAY
   }
 
   /** 获取所有活跃实体数量 */
@@ -57,6 +63,8 @@ export class EntityManager {
     this.renderList.length = 0
     this.renderDirty = false
     this.activeCount = 0
+    this.tagCache.clear()
+    this.tagCacheDirty = false
   }
 
   private flush(): void {
@@ -66,6 +74,7 @@ export class EntityManager {
       }
       this.toAdd.length = 0
       this.renderDirty = true
+      this.tagCacheDirty = true
     }
   }
 
@@ -79,6 +88,7 @@ export class EntityManager {
     }
     if (write !== this.entities.length) {
       this.renderDirty = true
+      this.tagCacheDirty = true
     }
     this.entities.length = write
     this.activeCount = write
@@ -94,4 +104,26 @@ export class EntityManager {
     this.renderList.sort((a, b) => a.layer - b.layer)
     this.renderDirty = false
   }
+
+  private rebuildTagCache(): void {
+    for (const arr of this.tagCache.values()) {
+      arr.length = 0
+    }
+    for (let i = 0; i < this.entities.length; i++) {
+      const entity = this.entities[i]
+      if (entity.active) {
+        for (const tag of entity.tags) {
+          let arr = this.tagCache.get(tag)
+          if (!arr) {
+            arr = []
+            this.tagCache.set(tag, arr)
+          }
+          arr.push(entity)
+        }
+      }
+    }
+    this.tagCacheDirty = false
+  }
 }
+
+const EMPTY_ARRAY: ReadonlyArray<Entity> = []
