@@ -125,11 +125,22 @@
 
 ### 完成标准
 
-- [ ] 改一行 JSON 能出一个新关卡，不碰代码
-- [ ] 改植物属性（段数、攻击力、血量）只需改配置
-- [ ] 改僵尸属性只需改配置
-- [ ] 改难度参数只需改配置
-- [ ] 配置有校验，填错能报错
+- [x] 改一行 JSON 能出一个新关卡，不碰代码
+- [x] 改植物属性（段数、攻击力、血量）只需改配置
+- [x] 改僵尸属性只需改配置
+- [x] 改难度参数只需改配置
+- [x] 配置有校验，填错能报错
+
+> **已完成** — 8 个配置文件 + 校验函数 + 8 个校验测试 + 113 个总测试通过。详见 `docs/plans/2026-04-14-stage3-config-layer.md`。
+>
+> **实现要点**：
+> - 配置层 5 个文件：plants / zombies / stages / difficulty / battle，字段名对齐 GAME_DESIGN
+> - 运行时配置校验：植物 id 唯一性、引用完整性、数值合法性
+> - 游戏层重命名 `segments` → `comboSegment` 对齐设计文档
+> - BattleConfig 支持多僵尸类型（`zombieConfigs` Record）和可配波次暂停时长
+> - BattleScene 全部硬编码常量删除，从 config 层组装参数注入
+> - 两个体验不同的关卡验收通过：关卡 1（少量慢僵尸）vs 关卡 2（大量快僵尸）
+> - 通关自动进入下一关，全部通关回菜单
 
 **验收原则**：核心代码零改动的情况下，纯靠配置能做出体验明显不同的两个关卡。
 
@@ -227,3 +238,4 @@
 | [plans/2026-04-13-stage1-game-engine.md](./plans/2026-04-13-stage1-game-engine.md) | 阶段一实现计划（已完成） |
 | [plans/2026-04-13-engine-upgrade-for-stage2.md](./plans/2026-04-13-engine-upgrade-for-stage2.md) | 阶段二前引擎升级设计（已完成） |
 | [plans/2026-04-14-stage2-core-battle.md](./plans/2026-04-14-stage2-core-battle.md) | 阶段二核心战斗机制实现计划（已完成） |
+| [plans/2026-04-14-stage3-config-layer.md](./plans/2026-04-14-stage3-config-layer.md) | 阶段三策略配置层实现计划（已完成） |
