@@ -1,9 +1,13 @@
-export type Element = 'normal' | 'ice' | 'fire'
-export type Trajectory = 'direct' | 'tracking' | 'pierce' | 'area'
+export type Element = 'normal' | 'ice' | 'fire' | 'electric' | 'stun' | 'knockback'
+export type Spread = 'single' | 'burst' | 'fan'
+export type Flight = 'straight' | 'tracking'
+export type Impact = 'vanish' | 'chain' | 'pierce' | 'explode'
 
 export interface SynthesizedEffect {
   readonly element: Element
-  readonly trajectory: Trajectory
+  readonly spread: Spread
+  readonly flight: Flight
+  readonly impact: Impact
 }
 
 /** 植物配置（硬编码，阶段三再抽配置文件） */
@@ -14,7 +18,9 @@ export interface PlantConfig {
   readonly attackPower: number
   readonly hp: number
   readonly element: Element
-  readonly trajectory: Trajectory
+  readonly spread: Spread
+  readonly flight: Flight
+  readonly impact: Impact
 }
 
 /** 植物运行时状态 */
@@ -72,4 +78,10 @@ export const enum ZombieState {
   Walking = 0,
   Chewing = 1,
   Dead = 2,
+}
+
+export interface ZombieStatus {
+  type: 'slow' | 'burn' | 'stun'
+  remaining: number
+  value: number
 }
