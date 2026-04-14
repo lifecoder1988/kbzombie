@@ -22,8 +22,11 @@ export default function App() {
     const gameLoop = new GameLoop()
 
     const switchTo = (name: string) => sceneManager.switchTo(name)
-    sceneManager.register(new MenuScene(switchTo))
-    sceneManager.register(new BattleScene(switchTo))
+    const menuScene = new MenuScene(switchTo)
+    const battleScene = new BattleScene(switchTo)
+    menuScene.setStageSelector((stageIndex) => battleScene.setLevel(stageIndex, 0))
+    sceneManager.register(menuScene)
+    sceneManager.register(battleScene)
 
     inputManager.addListener((event) => sceneManager.handleInput(event))
     inputManager.attach(window)

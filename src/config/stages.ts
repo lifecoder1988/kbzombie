@@ -25,4 +25,46 @@ export const STAGES: readonly StageDef[] = [
       },
     ],
   },
+  {
+    id: 2,
+    name: '弹道演示',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['piercer'],
+    levels: [
+      {
+        id: 1,
+        waves: [
+          { zombieType: 'slow', count: 8, interval: 800 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 3,
+    name: '弹道演示-辐射',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['sprayer'],
+    levels: [
+      {
+        id: 1,
+        waves: [
+          { zombieType: 'slow', count: 10, interval: 600 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 4,
+    name: '弹道演示-追踪',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['tracker'],
+    levels: [
+      {
+        id: 1,
+        waves: [
+          { zombieType: 'normal', count: 8, interval: 1000 },
+        ],
+      },
+    ],
+  },
 ]
