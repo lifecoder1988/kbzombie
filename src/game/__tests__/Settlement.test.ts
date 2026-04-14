@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculateSettlement } from '../Settlement'
-import type { PlantState, PlantConfig, Element, Trajectory } from '../types'
+import type { PlantState, PlantConfig, Element, Spread, Flight, Impact } from '../types'
 
 function makePlant(
   index: number,
@@ -8,7 +8,9 @@ function makePlant(
   comboSegment = 4,
   alive = true,
   element: Element = 'normal',
-  trajectory: Trajectory = 'direct',
+  spread: Spread = 'single',
+  flight: Flight = 'straight',
+  impact: Impact = 'vanish',
 ): PlantState {
   const config: PlantConfig = {
     id: `plant-${index}`,
@@ -17,7 +19,9 @@ function makePlant(
     attackPower,
     hp: 100,
     element,
-    trajectory,
+    spread,
+    flight,
+    impact,
   }
   return { config, currentHp: alive ? 100 : 0, alive, chainIndex: index }
 }
@@ -99,20 +103,30 @@ describe('calculateSettlement', () => {
 
   it('特效合成返回正确的 synthesizedEffect', () => {
     const plants = [
-      makePlant(0, 20, 4, true, 'ice', 'direct'),
-      makePlant(1, 15, 4, true, 'normal', 'pierce'),
+      makePlant(0, 20, 4, true, 'ice', 'single', 'straight', 'vanish'),
+      makePlant(1, 15, 4, true, 'normal', 'fan', 'straight', 'pierce'),
     ]
     const result = calculateSettlement(plants, 8, true, defaultSynergy)
-    expect(result.synthesizedEffect).toEqual({ element: 'ice', trajectory: 'pierce' })
+    expect(result.synthesizedEffect).toEqual({
+      element: 'ice',
+      spread: 'fan',
+      flight: 'straight',
+      impact: 'pierce',
+    })
   })
 
   it('阵亡植物不参与特效合成', () => {
     const plants = [
-      makePlant(0, 20, 4, true, 'normal', 'direct'),
-      makePlant(1, 15, 4, false, 'ice', 'area'),
+      makePlant(0, 20, 4, true, 'normal', 'single', 'straight', 'vanish'),
+      makePlant(1, 15, 4, false, 'ice', 'fan', 'tracking', 'explode'),
     ]
     const result = calculateSettlement(plants, 8, true, defaultSynergy)
-    expect(result.synthesizedEffect).toEqual({ element: 'normal', trajectory: 'direct' })
+    expect(result.synthesizedEffect).toEqual({
+      element: 'normal',
+      spread: 'single',
+      flight: 'straight',
+      impact: 'vanish',
+    })
   })
 
   it('不同植物有不同的 perPlantPower', () => {

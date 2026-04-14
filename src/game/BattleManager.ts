@@ -431,9 +431,13 @@ export class BattleManager {
 
       const power = perPlantPower[i]
 
-      if (synthesizedEffect.trajectory === 'area') {
+      if (synthesizedEffect.spread === 'fan') {
         this.fireAreaProjectiles(px, py, power, synthesizedEffect.element)
       } else {
+        const isTracking = synthesizedEffect.flight === 'tracking'
+        const isPierce = synthesizedEffect.impact === 'pierce'
+        // Map 4D fields to ProjectileEntity trajectory
+        const trajectory = isPierce ? 'pierce' : isTracking ? 'tracking' : 'direct'
         const id = `proj_${this.projectileIdCounter++}`
         const proj = new ProjectileEntity({
           id,
@@ -442,9 +446,9 @@ export class BattleManager {
           speed: this.config.projectileSpeed,
           power,
           rightBound: this.config.canvasWidth,
-          trajectory: synthesizedEffect.trajectory,
+          trajectory,
           element: synthesizedEffect.element,
-          target: synthesizedEffect.trajectory === 'tracking' ? this.findNearestZombie(px, py) : undefined,
+          target: isTracking ? this.findNearestZombie(px, py) : undefined,
           maxTurnRate: this.config.trackingTurnRate,
         })
         this.entityManager.add(proj)

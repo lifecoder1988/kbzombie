@@ -14,7 +14,7 @@ export function calculateSettlement(
     isFullChain: false,
     synergyMultiplier: 1.0,
     perPlantPower: [],
-    synthesizedEffect: { element: 'normal', trajectory: 'direct' },
+    synthesizedEffect: { element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
   }
 
   if (comboCount <= 0) {
@@ -63,7 +63,9 @@ export function calculateSettlement(
   // Synthesize effects from alive activated plants only
   const effectInputs = aliveActivatedIndices.map(idx => ({
     element: plants[idx].config.element,
-    trajectory: plants[idx].config.trajectory,
+    spread: plants[idx].config.spread,
+    flight: plants[idx].config.flight,
+    impact: plants[idx].config.impact,
   }))
   const synthesizedEffect: SynthesizedEffect = synthesizeEffects(effectInputs)
 

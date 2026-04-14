@@ -4,8 +4,8 @@ import { BattleStatus, ZombieState } from '../types'
 import type { WaveConfig, PlantConfig } from '../types'
 
 const TEST_PLANTS: PlantConfig[] = [
-  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', trajectory: 'direct' },
-  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', trajectory: 'direct' },
+  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
+  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', spread: 'single', flight: 'straight', impact: 'vanish' },
 ]
 
 const TEST_WAVES: WaveConfig[] = [
@@ -177,7 +177,7 @@ describe('BattleManager', () => {
 
   it('area 弹道创建 areaBulletCount 颗子弹（奇数）', () => {
     const areaPlants: PlantConfig[] = [
-      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', trajectory: 'area' },
+      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'fan', flight: 'straight', impact: 'vanish' },
     ]
     const mgr = createManager({ lanePlants: [areaPlants], areaBulletCount: 3 })
     mgr.update(1100)
@@ -190,7 +190,7 @@ describe('BattleManager', () => {
 
   it('area 弹道偶数颗子弹也能正确创建', () => {
     const areaPlants: PlantConfig[] = [
-      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', trajectory: 'area' },
+      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'fan', flight: 'straight', impact: 'vanish' },
     ]
     const mgr = createManager({ lanePlants: [areaPlants], areaBulletCount: 4 })
     mgr.update(1100)
@@ -204,7 +204,7 @@ describe('BattleManager', () => {
   it('pierce 弹道命中后继续飞行可命中下一只僵尸', () => {
     const highHpZombie = { hp: 200, speed: 30, chewDps: 10 }
     const piercePlants: PlantConfig[] = [
-      { id: 'pierce_plant', name: '穿透', comboSegment: 4, attackPower: 50, hp: 100, element: 'normal', trajectory: 'pierce' },
+      { id: 'pierce_plant', name: '穿透', comboSegment: 4, attackPower: 50, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'pierce' },
     ]
     const waves: WaveConfig[] = [{ zombieType: 'tank', count: 3, interval: 200 }]
     const mgr = createManager({ lanePlants: [piercePlants], waves, zombieConfigs: { tank: highHpZombie } })
@@ -225,10 +225,10 @@ describe('BattleManager', () => {
 // === Multi-lane tests ===
 
 const LANE0_PLANTS: PlantConfig[] = [
-  { id: 'a', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
+  { id: 'a', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
 ]
 const LANE1_PLANTS: PlantConfig[] = [
-  { id: 'b', name: 'B', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', trajectory: 'direct' },
+  { id: 'b', name: 'B', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', spread: 'single', flight: 'straight', impact: 'vanish' },
 ]
 
 function create2LaneManager(overrides?: Partial<BattleConfig>) {
