@@ -37,7 +37,7 @@ export const STAGES: readonly StageDef[] = [
         id: 1,
         laneCount: 1,
         waves: [
-          { zombieType: 'slow', count: 8, interval: 800 },
+          { zombieType: 'fat', count: 8, interval: 800 },
         ],
       },
     ],
@@ -52,7 +52,7 @@ export const STAGES: readonly StageDef[] = [
         id: 1,
         laneCount: 1,
         waves: [
-          { zombieType: 'slow', count: 10, interval: 600 },
+          { zombieType: 'fat', count: 10, interval: 600 },
         ],
       },
     ],
@@ -103,7 +103,55 @@ export const STAGES: readonly StageDef[] = [
           [],
         ],
         waves: [
-          { zombieType: 'slow', count: 12, interval: 1200 },
+          { zombieType: 'fat', count: 12, interval: 1200 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 7,
+    name: '僵尸类型演示-肉盾',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['peashooter', 'snow_pea', 'repeater'],
+    levels: [
+      {
+        id: 1,
+        laneCount: 1,
+        waves: [
+          { count: 5, interval: 2000, zombies: [
+            { type: 'normal', weight: 2 },
+            { type: 'conehead', weight: 1 },
+          ]},
+          { count: 5, interval: 1500, zombies: [
+            { type: 'conehead', weight: 2 },
+            { type: 'fat', weight: 1 },
+          ]},
+        ],
+      },
+    ],
+  },
+  {
+    id: 8,
+    name: '僵尸类型演示-混合冲锋',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['peashooter', 'snow_pea', 'cactus'],
+    levels: [
+      {
+        id: 1,
+        laneCount: 2,
+        waves: [
+          { count: 8, interval: 1500, zombies: [
+            { type: 'normal', weight: 3 },
+            { type: 'flag', weight: 1 },
+            { type: 'imp', weight: 1 },
+          ]},
+          { count: 10, interval: 1000, zombies: [
+            { type: 'normal', weight: 2 },
+            { type: 'conehead', weight: 2 },
+            { type: 'flag', weight: 2 },
+            { type: 'imp', weight: 1 },
+            { type: 'fat', weight: 1 },
+          ]},
         ],
       },
     ],
