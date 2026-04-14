@@ -7,7 +7,7 @@ export const BATTLE_PARAMS: BattleDef = {
   effectParams: {
     burst: { burstCount: 3, burstInterval: 80 },
     fan: { fanBulletCount: 5, fanSpreadAngle: Math.PI / 3 },
-    tracking: { trackingTurnRate: Math.PI },
+    tracking: { trackingTurnRate: Math.PI / 3 },
     chain: { chainBounces: 3, chainRange: 200 },
     explode: { explodeRadius: 80, explodeDamageRatio: 0.6 },
     ice: { slowRatio: 0.5, slowDuration: 3 },
