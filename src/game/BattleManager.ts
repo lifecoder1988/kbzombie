@@ -339,9 +339,10 @@ export class BattleManager {
       this._pendingProjectiles++
     }
 
-    // Heal on full chain
+    // Heal on full chain, then reassign zombie targets (revived plants need to be chewed again)
     if (isFullChain) {
       this.plantChain.healOnFullChain(this.config.healAmount)
+      this.reassignAllChewTargets()
     }
   }
 }
