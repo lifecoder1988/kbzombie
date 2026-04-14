@@ -3,8 +3,8 @@ import { validateConfig } from '../validation'
 import type { PlantDef, ZombieDef, StageDef, SynergyDef, BattleDef } from '../types'
 
 const validPlants: PlantDef[] = [
-  { id: 'p1', name: 'Plant1', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
-  { id: 'p2', name: 'Plant2', comboSegment: 8, attackPower: 20, hp: 80, element: 'ice', trajectory: 'direct' },
+  { id: 'p1', name: 'Plant1', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
+  { id: 'p2', name: 'Plant2', comboSegment: 8, attackPower: 20, hp: 80, element: 'ice', spread: 'single', flight: 'straight', impact: 'vanish' },
 ]
 
 const validZombies: Record<string, ZombieDef> = {
@@ -34,10 +34,18 @@ const validBattle: BattleDef = {
   projectileSpeed: 500,
   healAmount: 30,
   wavePauseDuration: 3000,
-  areaBulletCount: 5,
-  areaSpreadAngle: Math.PI / 3,
-  areaDamageDecay: 1.0,
-  trackingTurnRate: Math.PI,
+  effectParams: {
+    burst: { burstCount: 3, burstInterval: 80 },
+    fan: { fanBulletCount: 5, fanSpreadAngle: Math.PI / 3 },
+    tracking: { trackingTurnRate: Math.PI },
+    chain: { chainBounces: 3, chainRange: 200 },
+    explode: { explodeRadius: 80, explodeDamageRatio: 0.6 },
+    ice: { slowRatio: 0.5, slowDuration: 3 },
+    fire: { burnDps: 5, burnDuration: 3 },
+    electric: { conductRadius: 100, conductDamageDecay: 0.7, conductMaxJumps: 3 },
+    stun: { stunDuration: 1.5 },
+    knockback: { knockbackDistance: 60 },
+  },
 }
 
 describe('validateConfig', () => {
@@ -48,8 +56,8 @@ describe('validateConfig', () => {
 
   it('植物 id 重复报错', () => {
     const plants: PlantDef[] = [
-      { id: 'dup', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
-      { id: 'dup', name: 'B', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
+      { id: 'dup', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
+      { id: 'dup', name: 'B', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
     ]
     const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('dup'))).toBe(true)
@@ -57,7 +65,7 @@ describe('validateConfig', () => {
 
   it('植物 comboSegment <= 0 报错', () => {
     const plants: PlantDef[] = [
-      { id: 'bad', name: 'Bad', comboSegment: 0, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
+      { id: 'bad', name: 'Bad', comboSegment: 0, attackPower: 10, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
     ]
     const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('comboSegment'))).toBe(true)
@@ -65,7 +73,7 @@ describe('validateConfig', () => {
 
   it('植物 hp <= 0 报错', () => {
     const plants: PlantDef[] = [
-      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 0, element: 'normal', trajectory: 'direct' },
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 0, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
     ]
     const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('hp'))).toBe(true)
@@ -117,18 +125,34 @@ describe('validateConfig', () => {
 
   it('植物 element 非法值报错', () => {
     const plants = [
-      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'lightning' as any, trajectory: 'direct' as any },
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'lightning' as any, spread: 'single' as any, flight: 'straight' as any, impact: 'vanish' as any },
     ]
     const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('element'))).toBe(true)
   })
 
-  it('植物 trajectory 非法值报错', () => {
+  it('植物 spread 非法值报错', () => {
     const plants = [
-      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal' as any, trajectory: 'laser' as any },
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal' as any, spread: 'laser' as any, flight: 'straight' as any, impact: 'vanish' as any },
     ]
     const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
-    expect(errors.some(e => e.includes('trajectory'))).toBe(true)
+    expect(errors.some(e => e.includes('spread'))).toBe(true)
+  })
+
+  it('植物 flight 非法值报错', () => {
+    const plants = [
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal' as any, spread: 'single' as any, flight: 'laser' as any, impact: 'vanish' as any },
+    ]
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('flight'))).toBe(true)
+  })
+
+  it('植物 impact 非法值报错', () => {
+    const plants = [
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal' as any, spread: 'single' as any, flight: 'straight' as any, impact: 'laser' as any },
+    ]
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('impact'))).toBe(true)
   })
 
   it('synergy multiplier 缺少 key=1 报错', () => {
@@ -143,22 +167,31 @@ describe('validateConfig', () => {
     expect(errors.some(e => e.includes('1.0'))).toBe(true)
   })
 
-  it('areaBulletCount < 1 报错', () => {
-    const battle = { ...validBattle, areaBulletCount: 0 }
+  it('effectParams.fan.fanBulletCount < 1 报错', () => {
+    const battle = {
+      ...validBattle,
+      effectParams: { ...validBattle.effectParams, fan: { fanBulletCount: 0, fanSpreadAngle: Math.PI / 3 } },
+    }
     const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
-    expect(errors.some(e => e.includes('areaBulletCount'))).toBe(true)
+    expect(errors.some(e => e.includes('fanBulletCount'))).toBe(true)
   })
 
-  it('areaSpreadAngle <= 0 报错', () => {
-    const battle = { ...validBattle, areaSpreadAngle: 0 }
+  it('effectParams.fan.fanSpreadAngle <= 0 报错', () => {
+    const battle = {
+      ...validBattle,
+      effectParams: { ...validBattle.effectParams, fan: { fanBulletCount: 5, fanSpreadAngle: 0 } },
+    }
     const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
-    expect(errors.some(e => e.includes('areaSpreadAngle'))).toBe(true)
+    expect(errors.some(e => e.includes('fanSpreadAngle'))).toBe(true)
   })
 
-  it('areaDamageDecay <= 0 报错', () => {
-    const battle = { ...validBattle, areaDamageDecay: -1 }
+  it('effectParams.explode.explodeDamageRatio <= 0 报错', () => {
+    const battle = {
+      ...validBattle,
+      effectParams: { ...validBattle.effectParams, explode: { explodeRadius: 80, explodeDamageRatio: -1 } },
+    }
     const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
-    expect(errors.some(e => e.includes('areaDamageDecay'))).toBe(true)
+    expect(errors.some(e => e.includes('explodeDamageRatio'))).toBe(true)
   })
 })
 

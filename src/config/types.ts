@@ -1,5 +1,7 @@
-export type Element = 'normal' | 'ice' | 'fire'
-export type Trajectory = 'direct' | 'tracking' | 'pierce' | 'area'
+export type Element = 'normal' | 'ice' | 'fire' | 'electric' | 'stun' | 'knockback'
+export type Spread = 'single' | 'burst' | 'fan'
+export type Flight = 'straight' | 'tracking'
+export type Impact = 'vanish' | 'chain' | 'pierce' | 'explode'
 
 export interface SynergyDef {
   readonly multiplier: Readonly<Record<number, number>>
@@ -13,7 +15,9 @@ export interface PlantDef {
   readonly attackPower: number    // 基础攻击力
   readonly hp: number             // 血量上限
   readonly element: Element
-  readonly trajectory: Trajectory
+  readonly spread: Spread
+  readonly flight: Flight
+  readonly impact: Impact
 }
 
 /** 僵尸定义（字段名对齐 GAME_DESIGN.md 5.1） */
@@ -55,13 +59,24 @@ export interface DifficultyDef {
   readonly zombieSpeedMultiplier: number
 }
 
+/** 效果参数定义 */
+export interface EffectParamsDef {
+  readonly burst: { readonly burstCount: number; readonly burstInterval: number }
+  readonly fan: { readonly fanBulletCount: number; readonly fanSpreadAngle: number }
+  readonly tracking: { readonly trackingTurnRate: number }
+  readonly chain: { readonly chainBounces: number; readonly chainRange: number }
+  readonly explode: { readonly explodeRadius: number; readonly explodeDamageRatio: number }
+  readonly ice: { readonly slowRatio: number; readonly slowDuration: number }
+  readonly fire: { readonly burnDps: number; readonly burnDuration: number }
+  readonly electric: { readonly conductRadius: number; readonly conductDamageDecay: number; readonly conductMaxJumps: number }
+  readonly stun: { readonly stunDuration: number }
+  readonly knockback: { readonly knockbackDistance: number }
+}
+
 /** 战斗通用参数 */
 export interface BattleDef {
   readonly projectileSpeed: number
   readonly healAmount: number
   readonly wavePauseDuration: number
-  readonly areaBulletCount: number
-  readonly areaSpreadAngle: number
-  readonly areaDamageDecay: number
-  readonly trackingTurnRate: number
+  readonly effectParams: EffectParamsDef
 }

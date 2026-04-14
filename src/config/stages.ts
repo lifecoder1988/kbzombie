@@ -31,7 +31,7 @@ export const STAGES: readonly StageDef[] = [
     id: 2,
     name: '弹道演示',
     letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
-    plants: ['piercer'],
+    plants: ['cactus'],
     levels: [
       {
         id: 1,
@@ -46,7 +46,7 @@ export const STAGES: readonly StageDef[] = [
     id: 3,
     name: '弹道演示-辐射',
     letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
-    plants: ['sprayer'],
+    plants: ['fume_shroom'],
     levels: [
       {
         id: 1,
@@ -61,7 +61,7 @@ export const STAGES: readonly StageDef[] = [
     id: 4,
     name: '弹道演示-追踪',
     letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
-    plants: ['tracker'],
+    plants: ['cattail'],
     levels: [
       {
         id: 1,
@@ -92,14 +92,14 @@ export const STAGES: readonly StageDef[] = [
     id: 6,
     name: '3路演示-跨路攻击',
     letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
-    plants: ['sprayer', 'tracker'],
+    plants: ['fume_shroom', 'cattail'],
     levels: [
       {
         id: 1,
         laneCount: 3,
         lanePlants: [
-          ['peashooter', 'sprayer'],
-          ['peashooter', 'tracker', 'sprayer'],
+          ['peashooter', 'fume_shroom'],
+          ['peashooter', 'cattail', 'fume_shroom'],
           [],
         ],
         waves: [

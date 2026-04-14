@@ -1,7 +1,9 @@
 import type { PlantDef, ZombieDef, StageDef, SynergyDef, BattleDef } from './types'
 
-const VALID_ELEMENTS = new Set(['normal', 'ice', 'fire'])
-const VALID_TRAJECTORIES = new Set(['direct', 'tracking', 'pierce', 'area'])
+const VALID_ELEMENTS = new Set(['normal', 'ice', 'fire', 'electric', 'stun', 'knockback'])
+const VALID_SPREADS = new Set(['single', 'burst', 'fan'])
+const VALID_FLIGHTS = new Set(['straight', 'tracking'])
+const VALID_IMPACTS = new Set(['vanish', 'chain', 'pierce', 'explode'])
 
 export function validateConfig(
   plants: readonly PlantDef[],
@@ -27,8 +29,14 @@ export function validateConfig(
     if (!VALID_ELEMENTS.has(p.element)) {
       errors.push(`植物 "${p.id}" element 不合法: "${p.element}"，允许: ${[...VALID_ELEMENTS].join(', ')}`)
     }
-    if (!VALID_TRAJECTORIES.has(p.trajectory)) {
-      errors.push(`植物 "${p.id}" trajectory 不合法: "${p.trajectory}"，允许: ${[...VALID_TRAJECTORIES].join(', ')}`)
+    if (!VALID_SPREADS.has(p.spread)) {
+      errors.push(`植物 "${p.id}" spread 不合法: "${p.spread}"，允许: ${[...VALID_SPREADS].join(', ')}`)
+    }
+    if (!VALID_FLIGHTS.has(p.flight)) {
+      errors.push(`植物 "${p.id}" flight 不合法: "${p.flight}"，允许: ${[...VALID_FLIGHTS].join(', ')}`)
+    }
+    if (!VALID_IMPACTS.has(p.impact)) {
+      errors.push(`植物 "${p.id}" impact 不合法: "${p.impact}"，允许: ${[...VALID_IMPACTS].join(', ')}`)
     }
   }
 
@@ -75,14 +83,19 @@ export function validateConfig(
     errors.push(`synergy multiplier[1] 必须为 1.0，当前: ${synergy.multiplier[1]}`)
   }
 
-  if (battle.areaBulletCount < 1) {
-    errors.push(`areaBulletCount 必须 >= 1，当前: ${battle.areaBulletCount}`)
+  // Validate effectParams
+  const ep = battle.effectParams
+  if (ep.fan.fanBulletCount < 1) {
+    errors.push(`effectParams.fan.fanBulletCount 必须 >= 1，当前: ${ep.fan.fanBulletCount}`)
   }
-  if (battle.areaSpreadAngle <= 0) {
-    errors.push(`areaSpreadAngle 必须 > 0，当前: ${battle.areaSpreadAngle}`)
+  if (ep.fan.fanSpreadAngle <= 0) {
+    errors.push(`effectParams.fan.fanSpreadAngle 必须 > 0，当前: ${ep.fan.fanSpreadAngle}`)
   }
-  if (battle.areaDamageDecay <= 0) {
-    errors.push(`areaDamageDecay 必须 > 0，当前: ${battle.areaDamageDecay}`)
+  if (ep.burst.burstCount < 1) {
+    errors.push(`effectParams.burst.burstCount 必须 >= 1，当前: ${ep.burst.burstCount}`)
+  }
+  if (ep.explode.explodeDamageRatio <= 0) {
+    errors.push(`effectParams.explode.explodeDamageRatio 必须 > 0，当前: ${ep.explode.explodeDamageRatio}`)
   }
 
   return errors
