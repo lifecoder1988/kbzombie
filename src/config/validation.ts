@@ -67,11 +67,24 @@ export function validateConfig(
         }
       }
       for (const wave of level.waves) {
-        if (!(wave.zombieType in zombies)) {
-          errors.push(`阶段 ${stage.id} 关卡 ${level.id} 引用不存在的僵尸类型: "${wave.zombieType}"`)
-        }
         if (wave.count <= 0) {
           errors.push(`阶段 ${stage.id} 关卡 ${level.id} 波次 count 必须 > 0，当前: ${wave.count}`)
+        }
+        if (wave.zombies && wave.zombies.length > 0) {
+          for (const entry of wave.zombies) {
+            if (!(entry.type in zombies)) {
+              errors.push(`阶段 ${stage.id} 关卡 ${level.id} 波次引用不存在的僵尸类型: "${entry.type}"`)
+            }
+            if (entry.weight <= 0) {
+              errors.push(`阶段 ${stage.id} 关卡 ${level.id} 波次僵尸 "${entry.type}" weight 必须 > 0，当前: ${entry.weight}`)
+            }
+          }
+        } else if (wave.zombieType) {
+          if (!(wave.zombieType in zombies)) {
+            errors.push(`阶段 ${stage.id} 关卡 ${level.id} 引用不存在的僵尸类型: "${wave.zombieType}"`)
+          }
+        } else {
+          errors.push(`阶段 ${stage.id} 关卡 ${level.id} 波次必须提供 zombieType 或 zombies`)
         }
       }
     }

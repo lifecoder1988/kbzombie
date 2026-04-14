@@ -8,7 +8,7 @@ const validPlants: PlantDef[] = [
 ]
 
 const validZombies: Record<string, ZombieDef> = {
-  normal: { id: 'normal', name: 'Normal', hp: 50, speed: 30, chewDps: 10 },
+  normal: { id: 'normal', name: 'Normal', hp: 50, speed: 30, chewDps: 10, width: 40, height: 60, color: '#44cc44' },
 }
 
 const validStages: StageDef[] = [
@@ -192,6 +192,50 @@ describe('validateConfig', () => {
     }
     const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
     expect(errors.some(e => e.includes('explodeDamageRatio'))).toBe(true)
+  })
+
+  it('波次 zombies 数组引用不存在的 type 报错', () => {
+    const stages: StageDef[] = [
+      {
+        id: 1, name: 'S1', letters: ['f'], plants: ['p1'],
+        levels: [{ id: 1, waves: [{ count: 5, interval: 3000, zombies: [{ type: 'ghost', weight: 1 }] }] }],
+      },
+    ]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('ghost'))).toBe(true)
+  })
+
+  it('波次 zombies 数组 weight <= 0 报错', () => {
+    const stages: StageDef[] = [
+      {
+        id: 1, name: 'S1', letters: ['f'], plants: ['p1'],
+        levels: [{ id: 1, waves: [{ count: 5, interval: 3000, zombies: [{ type: 'normal', weight: 0 }] }] }],
+      },
+    ]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('weight'))).toBe(true)
+  })
+
+  it('波次 zombieType 和 zombies 都未提供报错', () => {
+    const stages: StageDef[] = [
+      {
+        id: 1, name: 'S1', letters: ['f'], plants: ['p1'],
+        levels: [{ id: 1, waves: [{ count: 5, interval: 3000 } as any] }],
+      },
+    ]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('zombieType') || e.includes('zombies'))).toBe(true)
+  })
+
+  it('波次 zombies 数组合法时不报错', () => {
+    const stages: StageDef[] = [
+      {
+        id: 1, name: 'S1', letters: ['f'], plants: ['p1'],
+        levels: [{ id: 1, waves: [{ count: 5, interval: 3000, zombies: [{ type: 'normal', weight: 1 }] }] }],
+      },
+    ]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors).toEqual([])
   })
 })
 
