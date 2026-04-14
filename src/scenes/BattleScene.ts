@@ -67,12 +67,15 @@ export class BattleScene implements Scene {
     }
 
     // ZombieDef → ZombieConfig (apply difficulty speed multiplier)
-    const zombieConfigs: Record<string, { hp: number; speed: number; chewDps: number }> = {}
+    const zombieConfigs: Record<string, { hp: number; speed: number; chewDps: number; width: number; height: number; color: string }> = {}
     for (const [id, def] of Object.entries(ZOMBIE_DEFS)) {
       zombieConfigs[id] = {
         hp: def.hp,
         speed: def.speed * difficulty.zombieSpeedMultiplier,
         chewDps: def.chewDps,
+        width: def.width,
+        height: def.height,
+        color: def.color,
       }
     }
 

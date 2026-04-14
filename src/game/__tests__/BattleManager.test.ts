@@ -25,7 +25,7 @@ const TEST_WAVES: WaveConfig[] = [
   { zombieType: 'normal', count: 3, interval: 1000 },
 ]
 
-const TEST_ZOMBIE = { hp: 50, speed: 30, chewDps: 10 }
+const TEST_ZOMBIE = { hp: 50, speed: 30, chewDps: 10, width: 40, height: 60, color: '#44cc44' }
 const TEST_LETTERS = ['f', 'j', 'd', 'k']
 
 function createManager(overrides?: Partial<BattleConfig>) {
@@ -215,7 +215,7 @@ describe('BattleManager', () => {
   })
 
   it('pierce 弹道命中后继续飞行可命中下一只僵尸', () => {
-    const highHpZombie = { hp: 200, speed: 30, chewDps: 10 }
+    const highHpZombie = { hp: 200, speed: 30, chewDps: 10, width: 40, height: 60, color: '#44cc44' }
     const piercePlants: PlantConfig[] = [
       { id: 'pierce_plant', name: '穿透', comboSegment: 4, attackPower: 50, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'pierce' },
     ]
@@ -395,7 +395,7 @@ describe('多路僵尸', () => {
 describe('多路波次完成', () => {
   it('波次完成时所有路连击归零并解锁', () => {
     // Use a single very weak zombie that dies quickly
-    const weakZombie = { hp: 1, speed: 30, chewDps: 0 }
+    const weakZombie = { hp: 1, speed: 30, chewDps: 0, width: 40, height: 60, color: '#44cc44' }
     const mgr = create2LaneManager({
       waves: [{ zombieType: 'weak', count: 1, interval: 100 }],
       zombieConfigs: { normal: TEST_ZOMBIE, weak: weakZombie },

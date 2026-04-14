@@ -27,6 +27,9 @@ export interface ZombieDef {
   readonly hp: number
   readonly speed: number          // 像素/秒
   readonly chewDps: number        // 啃植物每秒伤害
+  readonly width: number
+  readonly height: number
+  readonly color: string
 }
 
 /** 单波配置 */

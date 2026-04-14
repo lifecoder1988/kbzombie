@@ -6,12 +6,24 @@ import type { ZombieStatus } from './types'
 const ZOMBIE_TAGS: ReadonlySet<string> = new Set(['zombie'])
 const MAX_STATUSES = 8
 
+export interface ZombieSpawnParams {
+  id: string
+  x: number
+  y: number
+  hp: number
+  speed: number
+  chewDps: number
+  width?: number
+  height?: number
+  color?: string
+}
+
 export class ZombieEntity implements Entity {
   readonly id: string
   x: number
   y: number
-  width = 40
-  height = 60
+  width: number
+  height: number
   active = true
   layer = RenderLayer.Entity
   tags = ZOMBIE_TAGS
@@ -22,6 +34,7 @@ export class ZombieEntity implements Entity {
   private readonly maxHp: number
   private _currentHp: number
   private chewTargetX = -Infinity
+  private readonly color: string
 
   // Pre-allocated status array to avoid GC pressure
   private readonly _statuses: ZombieStatus[] = new Array(MAX_STATUSES).fill(null).map(() => ({
@@ -31,14 +44,17 @@ export class ZombieEntity implements Entity {
   }))
   private _statusCount = 0
 
-  constructor(id: string, x: number, y: number, hp: number, speed: number, chewDps: number) {
-    this.id = id
-    this.x = x
-    this.y = y
-    this.maxHp = hp
-    this._currentHp = hp
-    this.speed = speed
-    this.chewDps = chewDps
+  constructor(params: ZombieSpawnParams) {
+    this.id = params.id
+    this.x = params.x
+    this.y = params.y
+    this.maxHp = params.hp
+    this._currentHp = params.hp
+    this.speed = params.speed
+    this.chewDps = params.chewDps
+    this.width = params.width ?? 40
+    this.height = params.height ?? 60
+    this.color = params.color ?? '#44cc44'
   }
 
   get state(): ZombieState { return this._state }
@@ -165,7 +181,7 @@ export class ZombieEntity implements Entity {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = this._state === ZombieState.Chewing ? '#ff6600' : '#44cc44'
+    ctx.fillStyle = this._state === ZombieState.Chewing ? '#ff6600' : this.color
     ctx.fillRect(this.x, this.y, this.width, this.height)
     const barWidth = this.width
     const barHeight = 4

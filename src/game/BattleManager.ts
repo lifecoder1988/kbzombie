@@ -236,7 +236,17 @@ export class BattleManager {
     // Randomly assign to a lane
     const laneIdx = Math.floor(Math.random() * this.lanes.length)
     const lane = this.lanes[laneIdx]
-    const zombie = new ZombieEntity(id, spawnX, lane.laneY, zombieConfig.hp, zombieConfig.speed, zombieConfig.chewDps)
+    const zombie = new ZombieEntity({
+      id,
+      x: spawnX,
+      y: lane.laneY,
+      hp: zombieConfig.hp,
+      speed: zombieConfig.speed,
+      chewDps: zombieConfig.chewDps,
+      width: zombieConfig.width,
+      height: zombieConfig.height,
+      color: zombieConfig.color,
+    })
 
     this.zombieLanes.set(id, laneIdx)
     this.assignChewTarget(zombie, lane)
