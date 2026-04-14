@@ -171,7 +171,8 @@
 - [x] 锁定模式选路正确（锁定后只看当前路，结算后解除）
 - [x] 自由匹配状态下各路当前字母不重复
 - [x] Slot 机制：validateSlot 校验函数就绪，植物选择 UI 属阶段五
-- [ ] 胖僵尸、旗手、单词僵尸各有正确行为
+- [x] 5 种僵尸类型配置完成（普通/路障/胖僵尸/旗手/小鬼），体型和颜色可视区分
+- [x] 波次支持混合出怪（zombies 权重数组）
 - [x] 协同规则走配置，新增协同不改代码
 
 > **4.1 + 4.2 已完成** — 新增 EffectSynthesis 特效合成模块 + Settlement 协同倍率 + ProjectileEntity 4 种弹道（direct/pierce/area/tracking）+ element 渲染 + BattleManager 集成。157 个测试通过。详见 `docs/plans/2026-04-14-stage4-synergy-and-attack-types.md`（设计）和 `docs/plans/2026-04-14-stage4-synergy-and-attack-types-impl.md`（实现计划）。
@@ -207,6 +208,14 @@
 > - 僵尸状态系统：slow/burn/stun 持续状态 + knockback 一次性位移
 > - 初版植物从 6 棵扩展到 12 棵，覆盖全部维度值
 > - effectParams 集中配置所有效果参数
+>
+> **4.4 已完成** — 5 种僵尸类型 + 混合出怪 + 演示关卡。239 个测试通过。详见 `docs/plans/2026-04-14-stage4-zombie-types.md`。
+>
+> **实现要点**：
+> - ZombieDef 新增 width/height/color 字段，ZombieEntity 改用对象参数构造
+> - WaveDef 支持 zombies 权重数组混合出怪，向后兼容 zombieType 单类型
+> - 5 种僵尸覆盖 hp/速度/体型/chewDps 全参数空间：普通/路障/胖僵尸/旗手/小鬼
+> - 两个演示关卡验证：肉盾编队（普通+路障+胖）、混合冲锋（全部 5 种）
 
 **验收原则**：3 路 + 多种僵尸 + 协同攻击，有策略选择的完整战斗。
 
@@ -287,3 +296,4 @@
 | [plans/2026-04-14-stage4-multi-lane.md](./plans/2026-04-14-stage4-multi-lane.md) | 阶段四多路系统+Slot机制实现计划（4.3 已完成） |
 | [plans/2026-04-14-effect-synthesis-v2-design.md](./plans/2026-04-14-effect-synthesis-v2-design.md) | 特效合成系统 v2 设计文档（四维正交重构，已完成） |
 | [plans/2026-04-14-effect-synthesis-v2-impl.md](./plans/2026-04-14-effect-synthesis-v2-impl.md) | 特效合成系统 v2 实现计划（已完成） |
+| [plans/2026-04-14-stage4-zombie-types.md](./plans/2026-04-14-stage4-zombie-types.md) | 阶段四多种僵尸类型实现计划（4.4 已完成） |
