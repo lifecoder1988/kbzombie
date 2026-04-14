@@ -94,6 +94,9 @@ export class BattleManager {
   get comboCount(): number { return this.combo.current }
   get missedCount(): number { return this._missedCount }
   /** 当前需要输入的字母（链条中 combo 位置的字母） */
+  get totalWaves(): number { return this.config.waves.length }
+  get missedLimit(): number { return this.config.missedLimit }
+
   get currentLetter(): string {
     return this._chainLetters[this.combo.current] ?? this._chainLetters[0]
   }

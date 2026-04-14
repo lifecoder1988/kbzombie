@@ -1,25 +1,10 @@
 import type { Scene, InputEvent } from '../engine/types'
-import type { PlantConfig, WaveConfig, ZombieConfig } from '../game/types'
+import type { PlantConfig } from '../game/types'
 import { BattleStatus } from '../game/types'
 import { BattleManager } from '../game/BattleManager'
 import { PlantEntity } from '../game/PlantEntity'
-
-// ---- 阶段二硬编码常量（阶段三抽配置） ----
-const PLANTS: PlantConfig[] = [
-  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100 },
-  { id: 'snow_pea',   name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80 },
-  { id: 'repeater',   name: '双发射手', comboSegment: 8, attackPower: 35, hp: 120 },
-]
-const ZOMBIE_CONFIG: ZombieConfig = { hp: 50, speed: 30, chewDps: 10 }
-const WAVES: WaveConfig[] = [
-  { zombieType: 'normal', count: 5, interval: 3000 },
-  { zombieType: 'normal', count: 7, interval: 2500 },
-  { zombieType: 'normal', count: 10, interval: 2000 },
-]
-const MISSED_LIMIT = 3
-const LETTER_POOL = ['f', 'j', 'd', 'k', 's', 'l', 'a']
-const PROJECTILE_SPEED = 500
-const HEAL_AMOUNT = 30
+import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATTLE_PARAMS } from '../config'
+import { validateConfig } from '../config/validation'
 
 export class BattleScene implements Scene {
   readonly name = 'battle'
@@ -30,9 +15,16 @@ export class BattleScene implements Scene {
   private paused = false
   private canvasWidth = 0
   private canvasHeight = 0
+  private stageIndex = 0
+  private levelIndex = 0
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
+    const errors = validateConfig(PLANT_DEFS, ZOMBIE_DEFS, STAGES)
+    if (errors.length > 0) {
+      console.error('配置校验失败:')
+      for (const e of errors) console.error('  -', e)
+    }
   }
 
   enter(): void {
@@ -40,32 +32,58 @@ export class BattleScene implements Scene {
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
     this.paused = false
 
+    const stage = STAGES[this.stageIndex]
+    const level = stage.levels[this.levelIndex]
+    const difficulty = DIFFICULTIES[DEFAULT_DIFFICULTY]
+
+    // PlantDef → PlantConfig
+    const plants: PlantConfig[] = stage.plants.map(id => {
+      const def = PLANT_DEFS.find(p => p.id === id)!
+      return {
+        id: def.id,
+        name: def.name,
+        comboSegment: def.comboSegment,
+        attackPower: def.attackPower,
+        hp: def.hp,
+      }
+    })
+
+    // ZombieDef → ZombieConfig (apply difficulty speed multiplier)
+    const zombieConfigs: Record<string, { hp: number; speed: number; chewDps: number }> = {}
+    for (const [id, def] of Object.entries(ZOMBIE_DEFS)) {
+      zombieConfigs[id] = {
+        hp: def.hp,
+        speed: def.speed * difficulty.zombieSpeedMultiplier,
+        chewDps: def.chewDps,
+      }
+    }
+
     this.manager = new BattleManager({
-      plants: PLANTS,
-      waves: WAVES,
-      zombieConfigs: { normal: ZOMBIE_CONFIG },
-      letterPool: LETTER_POOL,
-      missedLimit: MISSED_LIMIT,
-      projectileSpeed: PROJECTILE_SPEED,
-      healAmount: HEAL_AMOUNT,
-      wavePauseDuration: 3000,
+      plants,
+      waves: level.waves,
+      zombieConfigs,
+      letterPool: stage.letters,
+      missedLimit: difficulty.missedLimit,
+      projectileSpeed: BATTLE_PARAMS.projectileSpeed,
+      healAmount: BATTLE_PARAMS.healAmount,
+      wavePauseDuration: BATTLE_PARAMS.wavePauseDuration,
       canvasWidth: this.canvasWidth,
       canvasHeight: this.canvasHeight,
     })
 
-    // 植物宽度按段数比例分配，占据画面左 35%
+    // Plant entity layout (layout ratios stay in code, not config)
     const plantAreaWidth = this.canvasWidth * 0.35
     const laneY = Math.round(this.canvasHeight * 0.4)
-    const totalSegments = PLANTS.reduce((s, p) => s + p.comboSegment, 0)
-    const gap = 8 // 植物间距
-    const totalGap = gap * (PLANTS.length - 1)
+    const totalSegments = plants.reduce((s, p) => s + p.comboSegment, 0)
+    const gap = 8
+    const totalGap = gap * (plants.length - 1)
     const usableWidth = plantAreaWidth - totalGap
     const startX = 20
 
     this.plantEntities = []
     let curX = startX
-    for (let i = 0; i < PLANTS.length; i++) {
-      const w = Math.round((PLANTS[i].comboSegment / totalSegments) * usableWidth)
+    for (let i = 0; i < plants.length; i++) {
+      const w = Math.round((plants[i].comboSegment / totalSegments) * usableWidth)
       const entity = new PlantEntity(`plant_${i}`, curX, laneY - 30, w, i)
       this.plantEntities.push(entity)
       curX += w + gap
@@ -85,33 +103,21 @@ export class BattleScene implements Scene {
 
     this.manager.update(dt)
 
-    // Sync plant entity states
     const plantStates = this.manager.getPlantStates()
     const comboCount = this.manager.comboCount
-
     const chainLetters = this.manager.getChainLetters()
 
-    // 按植物切割链条字母，并计算各植物的已打段数
     let segOffset = 0
     for (let i = 0; i < this.plantEntities.length; i++) {
       const entity = this.plantEntities[i]
-      const seg = PLANTS[i].comboSegment
+      if (i >= plantStates.length) break
 
-      if (i < plantStates.length) {
-        entity.syncState(plantStates[i])
-      }
-
-      // 该植物对应的字母片段
-      entity.letters = chainLetters.slice(segOffset, segOffset + seg) as string[]
-
-      // 该植物中已打过的段数
-      const typedInPlant = Math.max(0, Math.min(seg, comboCount - segOffset))
-      entity.typedCount = typedInPlant
-
-      // 当前连击目标是否在这棵植物上
-      entity.isCurrentTarget = comboCount >= segOffset && comboCount < segOffset + seg
-
-      segOffset += seg
+      const segments = plantStates[i].config.comboSegment
+      entity.syncState(plantStates[i])
+      entity.letters = chainLetters.slice(segOffset, segOffset + segments) as string[]
+      entity.typedCount = Math.max(0, Math.min(segments, comboCount - segOffset))
+      entity.isCurrentTarget = comboCount >= segOffset && comboCount < segOffset + segments
+      segOffset += segments
     }
   }
 
@@ -156,9 +162,10 @@ export class BattleScene implements Scene {
       ctx.fillStyle = '#ffffff'
       ctx.font = '16px sans-serif'
       ctx.textAlign = 'left'
-      ctx.fillText(`波次: ${wave + 1}/${WAVES.length}`, 10, 25)
-      ctx.fillText(`连击: ${combo}`, 150, 25)
-      ctx.fillText(`漏过: ${missed}/${MISSED_LIMIT}`, 280, 25)
+      ctx.fillText(`第${this.stageIndex + 1}阶段 关卡${this.levelIndex + 1}`, 10, 25)
+      ctx.fillText(`波次: ${wave + 1}/${this.manager.totalWaves}`, 180, 25)
+      ctx.fillText(`连击: ${combo}`, 310, 25)
+      ctx.fillText(`漏过: ${missed}/${this.manager.missedLimit}`, 430, 25)
 
       if (status === BattleStatus.Fighting) {
         ctx.textAlign = 'right'
