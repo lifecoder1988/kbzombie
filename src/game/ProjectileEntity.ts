@@ -1,6 +1,6 @@
 import type { Entity } from '../engine/types'
 import { RenderLayer } from '../engine/types'
-import type { Element, Trajectory } from './types'
+import type { Element, Spread, Flight, Impact } from './types'
 
 const PROJECTILE_TAGS: ReadonlySet<string> = new Set(['projectile'])
 
@@ -8,6 +8,9 @@ const ELEMENT_COLORS: Record<Element, string> = {
   normal: '#ffd700',
   ice: '#87ceeb',
   fire: '#ff6347',
+  electric: '#9b59b6',
+  stun: '#f1c40f',
+  knockback: '#e67e22',
 }
 
 export interface ProjectileConfig {
@@ -17,14 +20,18 @@ export interface ProjectileConfig {
   readonly speed: number
   readonly power: number
   readonly rightBound: number
-  readonly trajectory: Trajectory
   readonly element: Element
+  readonly spread: Spread
+  readonly flight: Flight
+  readonly impact: Impact
   readonly angle?: number
   readonly target?: { x: number; y: number; active?: boolean }
   readonly maxTurnRate?: number
+  readonly chainBounces?: number
+  readonly chainRange?: number
 }
 
-// Vertical bounds for area projectiles (pixels from spawn)
+// Vertical bounds for non-horizontal projectiles (pixels from spawn)
 const Y_BOUND = 800
 
 export class ProjectileEntity implements Entity {
@@ -36,23 +43,32 @@ export class ProjectileEntity implements Entity {
   active = true
   layer = RenderLayer.Effect
   tags = PROJECTILE_TAGS
+
   readonly power: number
   readonly element: Element
-  readonly trajectory: Trajectory
+  readonly spread: Spread
+  readonly flight: Flight
+  readonly impact: Impact
+  readonly chainRange: number
 
   private readonly speed: number
   private readonly rightBound: number
   private readonly spawnY: number
 
-  // Pierce: hit tracking
-  private readonly hitSet: Set<string> | null
+  // Hit tracking (used by pierce and chain)
+  private readonly hitSet: Set<string>
 
-  // Area: flight angle (also used as current heading for tracking)
+  // Current heading for movement
   private heading: number
 
   // Tracking: target reference
   private readonly target: { x: number; y: number; active?: boolean } | null
   private readonly maxTurnRate: number
+
+  // Chain: bounce state
+  private _bounceCount = 0
+  private readonly maxBounces: number
+  private _needsRedirect = false
 
   constructor(config: ProjectileConfig) {
     this.id = config.id
@@ -62,52 +78,79 @@ export class ProjectileEntity implements Entity {
     this.speed = config.speed
     this.power = config.power
     this.rightBound = config.rightBound
-    this.trajectory = config.trajectory
     this.element = config.element
+    this.spread = config.spread
+    this.flight = config.flight
+    this.impact = config.impact
+    this.chainRange = config.chainRange ?? 0
+    this.maxBounces = config.chainBounces ?? 0
+    this.hitSet = new Set()
     this.target = config.target ?? null
     this.maxTurnRate = config.maxTurnRate ?? Math.PI
 
-    // Pierce trajectory tracks hit zombies
-    this.hitSet = config.trajectory === 'pierce' ? new Set() : null
-
     // Set initial heading
-    if (config.trajectory === 'tracking' && config.target) {
+    if (config.flight === 'tracking' && config.target) {
       this.heading = Math.atan2(
         config.target.y - config.y,
         config.target.x - config.x,
       )
-    } else if (config.trajectory === 'area') {
-      this.heading = config.angle ?? 0
     } else {
-      this.heading = 0
+      this.heading = config.angle ?? 0
     }
+  }
+
+  get bounceCount(): number {
+    return this._bounceCount
+  }
+
+  get needsRedirect(): boolean {
+    return this._needsRedirect
   }
 
   hasHit(zombieId: string): boolean {
-    return this.hitSet !== null && this.hitSet.has(zombieId)
+    return this.hitSet.has(zombieId)
   }
 
   onHit(zombieId: string): void {
-    if (this.trajectory === 'pierce' && this.hitSet) {
-      this.hitSet.add(zombieId)
-    } else {
-      this.active = false
+    switch (this.impact) {
+      case 'vanish':
+        this.active = false
+        break
+
+      case 'pierce':
+        this.hitSet.add(zombieId)
+        break
+
+      case 'chain':
+        this.hitSet.add(zombieId)
+        this._bounceCount++
+        if (this._bounceCount >= this.maxBounces) {
+          this.active = false
+        } else {
+          this._needsRedirect = true
+        }
+        break
+
+      case 'explode':
+        this.active = false
+        break
     }
+  }
+
+  redirectTo(targetX: number, targetY: number): void {
+    this.heading = Math.atan2(targetY - this.y, targetX - this.x)
+    this._needsRedirect = false
+  }
+
+  clearRedirect(): void {
+    this._needsRedirect = false
   }
 
   update(dt: number): void {
     const dtSec = dt / 1000
 
-    switch (this.trajectory) {
-      case 'direct':
-        this.x += this.speed * dtSec
-        break
-
-      case 'pierce':
-        this.x += this.speed * dtSec
-        break
-
-      case 'area':
+    switch (this.flight) {
+      case 'straight':
         this.x += this.speed * Math.cos(this.heading) * dtSec
         this.y += this.speed * Math.sin(this.heading) * dtSec
         break
@@ -121,7 +164,7 @@ export class ProjectileEntity implements Entity {
     if (this.x > this.rightBound) {
       this.active = false
     }
-    if (this.trajectory === 'area' && Math.abs(this.y - this.spawnY) > Y_BOUND) {
+    if (Math.abs(this.y - this.spawnY) > Y_BOUND) {
       this.active = false
     }
   }
