@@ -53,11 +53,14 @@ describe('BattleManager', () => {
     expect(mgr.comboCount).toBe(1)
   })
 
-  it('按错字母触发结算并发射弹道', () => {
+  it('按错字母触发结算，打满第一棵植物后才发射弹道', () => {
     const mgr = createManager()
     mgr.update(1100)
-    mgr.onKeyDown(mgr.currentLetter) // combo 1
-    mgr.onKeyDown('z') // miss
+    // 打满第一棵植物（4 段）
+    for (let i = 0; i < 4; i++) mgr.onKeyDown(mgr.currentLetter)
+    // 再多打一下进入第二棵，然后按错
+    mgr.onKeyDown(mgr.currentLetter) // combo 5
+    mgr.onKeyDown('z') // miss → 结算，P0 满了发射
     expect(mgr.comboCount).toBe(0)
     expect(mgr.projectileCount).toBeGreaterThan(0)
   })
