@@ -1,8 +1,10 @@
 import type { Entity } from '../engine/types'
 import { RenderLayer } from '../engine/types'
 import { ZombieState } from './types'
+import type { ZombieStatus } from './types'
 
 const ZOMBIE_TAGS: ReadonlySet<string> = new Set(['zombie'])
+const MAX_STATUSES = 8
 
 export class ZombieEntity implements Entity {
   readonly id: string
@@ -21,6 +23,14 @@ export class ZombieEntity implements Entity {
   private _currentHp: number
   private chewTargetX = -Infinity
 
+  // Pre-allocated status array to avoid GC pressure
+  private readonly _statuses: ZombieStatus[] = new Array(MAX_STATUSES).fill(null).map(() => ({
+    type: 'slow' as const,
+    remaining: 0,
+    value: 0,
+  }))
+  private _statusCount = 0
+
   constructor(id: string, x: number, y: number, hp: number, speed: number, chewDps: number) {
     this.id = id
     this.x = x
@@ -33,6 +43,35 @@ export class ZombieEntity implements Entity {
 
   get state(): ZombieState { return this._state }
   get currentHp(): number { return this._currentHp }
+
+  applyStatus(status: ZombieStatus): void {
+    // Same type → refresh remaining and value
+    for (let i = 0; i < this._statusCount; i++) {
+      if (this._statuses[i].type === status.type) {
+        this._statuses[i].remaining = status.remaining
+        this._statuses[i].value = status.value
+        return
+      }
+    }
+    // Different type → add to list (if space available)
+    if (this._statusCount < MAX_STATUSES) {
+      this._statuses[this._statusCount].type = status.type
+      this._statuses[this._statusCount].remaining = status.remaining
+      this._statuses[this._statusCount].value = status.value
+      this._statusCount++
+    }
+  }
+
+  applyKnockback(distance: number, rightBound: number): void {
+    this.x = Math.min(this.x + distance, rightBound)
+  }
+
+  hasStatus(type: string): boolean {
+    for (let i = 0; i < this._statusCount; i++) {
+      if (this._statuses[i].type === type) return true
+    }
+    return false
+  }
 
   setChewTarget(targetX: number): void {
     this.chewTargetX = targetX
@@ -59,13 +98,65 @@ export class ZombieEntity implements Entity {
 
   getChewDamage(dt: number): number {
     if (this._state !== ZombieState.Chewing) return 0
-    return this.chewDps * (dt / 1000)
+    // Stun stops chewing
+    for (let i = 0; i < this._statusCount; i++) {
+      if (this._statuses[i].type === 'stun') return 0
+    }
+    let dps = this.chewDps
+    // Slow reduces chew DPS
+    for (let i = 0; i < this._statusCount; i++) {
+      if (this._statuses[i].type === 'slow') {
+        dps *= (1 - this._statuses[i].value)
+        break
+      }
+    }
+    return dps * (dt / 1000)
   }
 
   update(dt: number): void {
     if (this._state === ZombieState.Dead) return
+
+    const dtSeconds = dt / 1000
+
+    // 1. Process status timers and apply burn damage (burn damages even stunned zombies)
+    let i = 0
+    while (i < this._statusCount) {
+      const s = this._statuses[i]
+      if (s.type === 'burn') {
+        this.takeDamage(s.value * dtSeconds)
+        if (!this.active) return // zombie died from burn
+      }
+      s.remaining -= dtSeconds
+      if (s.remaining <= 0) {
+        // Remove by swapping with last
+        this._statusCount--
+        if (i < this._statusCount) {
+          this._statuses[i].type = this._statuses[this._statusCount].type
+          this._statuses[i].remaining = this._statuses[this._statusCount].remaining
+          this._statuses[i].value = this._statuses[this._statusCount].value
+        }
+        // Don't increment i — recheck the swapped element
+      } else {
+        i++
+      }
+    }
+
+    // 2. Check stun: skip movement and chewing
+    for (let j = 0; j < this._statusCount; j++) {
+      if (this._statuses[j].type === 'stun') return
+    }
+
+    // 3. Determine effective speed (slow reduces it)
+    let effectiveSpeed = this.speed
+    for (let j = 0; j < this._statusCount; j++) {
+      if (this._statuses[j].type === 'slow') {
+        effectiveSpeed *= (1 - this._statuses[j].value)
+        break
+      }
+    }
+
     if (this._state === ZombieState.Walking) {
-      this.x -= this.speed * (dt / 1000)
+      this.x -= effectiveSpeed * dtSeconds
       if (this.x <= this.chewTargetX) {
         this.x = this.chewTargetX
         this._state = ZombieState.Chewing
