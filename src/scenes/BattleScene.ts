@@ -27,6 +27,11 @@ export class BattleScene implements Scene {
     }
   }
 
+  setLevel(stageIndex: number, levelIndex: number): void {
+    this.stageIndex = stageIndex
+    this.levelIndex = levelIndex
+  }
+
   enter(): void {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
@@ -205,7 +210,12 @@ export class BattleScene implements Scene {
         ctx.fillText('胜利！', w / 2, h / 2 - 20)
         ctx.fillStyle = '#ffffff'
         ctx.font = '24px sans-serif'
-        ctx.fillText('按空格返回菜单', w / 2, h / 2 + 40)
+        const stage = STAGES[this.stageIndex]
+        if (this.levelIndex + 1 < stage.levels.length) {
+          ctx.fillText('按空格进入下一关', w / 2, h / 2 + 40)
+        } else {
+          ctx.fillText('按空格返回菜单', w / 2, h / 2 + 40)
+        }
       }
 
       if (status === BattleStatus.Defeat) {
@@ -240,7 +250,13 @@ export class BattleScene implements Scene {
     const status = this.manager.status
 
     if (status === BattleStatus.Victory && event.key === ' ') {
-      this.switchTo('menu')
+      const stage = STAGES[this.stageIndex]
+      if (this.levelIndex + 1 < stage.levels.length) {
+        this.levelIndex++
+        this.enter()
+      } else {
+        this.switchTo('menu')
+      }
       return
     }
 
