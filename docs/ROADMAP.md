@@ -191,6 +191,18 @@
 > - 辐射弹道扇形可跨路，追踪弹道全局锁定最近僵尸
 > - 植物宽度按全局最大段数对齐，各路视觉一致
 > - LevelDef 新增 laneCount + lanePlants，config 驱动多路
+>
+> **特效合成 v2 重构完成** — 从二维（Element×Trajectory）重构为四维正交（Element×Spread×Flight×Impact）。232 个测试通过。详见 `docs/plans/2026-04-14-effect-synthesis-v2-design.md`（设计）和 `docs/plans/2026-04-14-effect-synthesis-v2-impl.md`（实现计划）。
+>
+> **重构要点**：
+> - 四维正交合成：Element(6值) × Spread(3值) × Flight(2值) × Impact(4值) = 144 种理论形态
+> - 冰火抵消规则保留，抵消后取剩余最高优先级元素
+> - 弹道生命周期三阶段：发射（Spread）→ 飞行（Flight）→ 命中（Impact）
+> - 新增命中行为：chain（弹跳到下一只僵尸）、explode（落点范围爆炸）
+> - 新增元素效果：electric（僵尸连通性传导伤害）、stun（眩晕）、knockback（击退位移）
+> - 僵尸状态系统：slow/burn/stun 持续状态 + knockback 一次性位移
+> - 初版植物从 6 棵扩展到 12 棵，覆盖全部维度值
+> - effectParams 集中配置所有效果参数
 
 **验收原则**：3 路 + 多种僵尸 + 协同攻击，有策略选择的完整战斗。
 
@@ -265,3 +277,5 @@
 | [plans/2026-04-14-stage4-synergy-and-attack-types.md](./plans/2026-04-14-stage4-synergy-and-attack-types.md) | 阶段四协同攻击+多弹道设计文档（4.1+4.2 已完成） |
 | [plans/2026-04-14-stage4-synergy-and-attack-types-impl.md](./plans/2026-04-14-stage4-synergy-and-attack-types-impl.md) | 阶段四协同攻击+多弹道实现计划（4.1+4.2 已完成） |
 | [plans/2026-04-14-stage4-multi-lane.md](./plans/2026-04-14-stage4-multi-lane.md) | 阶段四多路系统+Slot机制实现计划（4.3 已完成） |
+| [plans/2026-04-14-effect-synthesis-v2-design.md](./plans/2026-04-14-effect-synthesis-v2-design.md) | 特效合成系统 v2 设计文档（四维正交重构，已完成） |
+| [plans/2026-04-14-effect-synthesis-v2-impl.md](./plans/2026-04-14-effect-synthesis-v2-impl.md) | 特效合成系统 v2 实现计划（已完成） |
