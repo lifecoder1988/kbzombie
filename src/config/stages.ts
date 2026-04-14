@@ -99,7 +99,7 @@ export const STAGES: readonly StageDef[] = [
         laneCount: 3,
         lanePlants: [
           ['peashooter', 'sprayer'],
-          ['peashooter', 'tracker'],
+          ['peashooter', 'tracker', 'sprayer'],
           [],
         ],
         waves: [
