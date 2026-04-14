@@ -29,3 +29,23 @@ describe('LetterProvider', () => {
     expect(seqA).not.toEqual(seqB)
   })
 })
+
+describe('nextExcluding', () => {
+  it('生成的字母不在排除列表中', () => {
+    const provider = new LetterProvider(['a', 'b', 'c'], 42)
+    const letter = provider.nextExcluding(['a', 'b'])
+    expect(letter).toBe('c')
+  })
+
+  it('排除列表为空时正常生成', () => {
+    const provider = new LetterProvider(['a', 'b'], 42)
+    const letter = provider.nextExcluding([])
+    expect(['a', 'b']).toContain(letter)
+  })
+
+  it('所有字母都被排除时返回 next() 的结果（降级）', () => {
+    const provider = new LetterProvider(['a', 'b'], 42)
+    const letter = provider.nextExcluding(['a', 'b'])
+    expect(['a', 'b']).toContain(letter)
+  })
+})

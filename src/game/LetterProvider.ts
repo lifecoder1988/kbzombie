@@ -21,4 +21,16 @@ export class LetterProvider {
     const index = Math.floor(this.random() * this.pool.length)
     return this.pool[index]
   }
+
+  nextExcluding(exclude: readonly string[]): string {
+    if (exclude.length === 0 || exclude.length >= this.pool.length) {
+      return this.next()
+    }
+    const maxAttempts = this.pool.length * 2
+    for (let i = 0; i < maxAttempts; i++) {
+      const letter = this.next()
+      if (!exclude.includes(letter)) return letter
+    }
+    return this.next() // 降级
+  }
 }
