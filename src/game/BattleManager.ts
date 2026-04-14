@@ -1,18 +1,17 @@
 import { EntityManager } from '../engine/EntityManager'
 import { intersects } from '../engine/CollisionDetection'
 import { BattleStatus } from './types'
-import type { PlantConfig, PlantState, WaveConfig, ZombieConfig, Element, Trajectory } from './types'
-import { PlantChain } from './PlantChain'
-import { ComboSystem } from './ComboSystem'
-import { LetterProvider } from './LetterProvider'
+import type { PlantConfig, PlantState, WaveConfig, ZombieConfig, Element } from './types'
+import { Lane } from './Lane'
 import { calculateSettlement } from './Settlement'
-import { classifyInput, InputAction } from './InputHandler'
+import { IGNORED_KEYS } from './InputHandler'
 import { ZombieEntity } from './ZombieEntity'
 import { ProjectileEntity } from './ProjectileEntity'
 import { ZombieState } from './types'
 
 export interface BattleConfig {
-  readonly plants: readonly PlantConfig[]
+  readonly laneCount: number
+  readonly lanePlants: readonly (readonly PlantConfig[])[]
   readonly waves: readonly WaveConfig[]
   readonly zombieConfigs: Readonly<Record<string, ZombieConfig>>
   readonly letterPool: readonly string[]
@@ -33,15 +32,13 @@ export interface BattleConfig {
 export class BattleManager {
   private readonly config: BattleConfig
   private readonly entityManager: EntityManager
-  private readonly plantChain: PlantChain
-  private readonly combo: ComboSystem
-  private readonly letters: LetterProvider
+  private readonly lanes: Lane[]
+  private currentLaneIndex: number | null = null
+  private readonly zombieLanes = new Map<string, number>()
 
   private _status: BattleStatus = BattleStatus.Fighting
   private _currentWave = 0
   private _missedCount = 0
-  /** 整条链条的字母序列，长度 = totalSegments */
-  private _chainLetters: string[]
 
   // wave spawn tracking
   private spawnedInWave = 0
@@ -59,62 +56,85 @@ export class BattleManager {
   private projectileIdCounter = 0
   private _pendingProjectiles = 0
 
-  // plant layout
-  private readonly plantPositions: readonly number[]
-  private readonly plantWidths: readonly number[]
-  private readonly laneY: number
-
   constructor(config: BattleConfig) {
     this.config = config
     this.entityManager = new EntityManager()
-    this.plantChain = new PlantChain(config.plants)
-    this.combo = new ComboSystem(config.plants.map(p => p.comboSegment))
-    this.letters = new LetterProvider(config.letterPool, config.letterSeed)
-    const totalSeg = config.plants.reduce((s, p) => s + p.comboSegment, 0)
-    this._chainLetters = Array.from({ length: totalSeg }, () => this.letters.next())
 
-    // 植物位置按段数比例分配，占画面左 35%
-    const plantAreaWidth = config.canvasWidth * 0.35
-    const totalSeg2 = config.plants.reduce((s, p) => s + p.comboSegment, 0)
-    const gap = 8
-    const totalGap = gap * (config.plants.length - 1)
-    const usableWidth = plantAreaWidth - totalGap
-    const startX = 20
-    const positions: number[] = []
-    const widths: number[] = []
-    let curX = startX
-    for (let i = 0; i < config.plants.length; i++) {
-      const w = Math.round((config.plants[i].comboSegment / totalSeg2) * usableWidth)
-      positions.push(curX)
-      widths.push(w)
-      curX += w + gap
+    // Calculate lane Y positions
+    const laneYPositions = this.calculateLaneYPositions(config.laneCount, config.canvasHeight)
+
+    // Create lanes
+    this.lanes = []
+    for (let i = 0; i < config.laneCount; i++) {
+      const plants = config.lanePlants[i] ?? []
+      const seed = config.letterSeed !== undefined ? config.letterSeed + i * 1000 : undefined
+      const lane = new Lane(i, plants, config.letterPool, laneYPositions[i], config.canvasWidth, seed)
+      this.lanes.push(lane)
     }
-    this.plantPositions = positions
-    this.plantWidths = widths
-    this.laneY = Math.round(config.canvasHeight * 0.4)
+
+    // Ensure no two lanes share the same first letter
+    this.ensureNoLetterConflict()
+  }
+
+  private calculateLaneYPositions(laneCount: number, canvasHeight: number): number[] {
+    if (laneCount === 1) {
+      return [Math.round(canvasHeight * 0.4)]
+    }
+    const positions: number[] = []
+    const topY = canvasHeight * 0.2
+    const bottomY = canvasHeight * 0.7
+    for (let i = 0; i < laneCount; i++) {
+      const t = laneCount > 1 ? i / (laneCount - 1) : 0
+      positions.push(Math.round(topY + t * (bottomY - topY)))
+    }
+    return positions
+  }
+
+  private ensureNoLetterConflict(): void {
+    if (this.lanes.length <= 1) return
+    for (let i = 1; i < this.lanes.length; i++) {
+      const otherFirstLetters = this.lanes
+        .filter((_, idx) => idx !== i)
+        .map(l => l.currentLetter)
+      if (otherFirstLetters.includes(this.lanes[i].currentLetter)) {
+        this.lanes[i].regenerateLetters(otherFirstLetters)
+      }
+    }
   }
 
   get status(): BattleStatus { return this._status }
   get currentWave(): number { return this._currentWave }
-  get comboCount(): number { return this.combo.current }
   get missedCount(): number { return this._missedCount }
-  /** 当前需要输入的字母（链条中 combo 位置的字母） */
   get totalWaves(): number { return this.config.waves.length }
   get missedLimit(): number { return this.config.missedLimit }
 
+  get comboCount(): number {
+    if (this.currentLaneIndex !== null) return this.lanes[this.currentLaneIndex].comboCount
+    return 0
+  }
+
   get currentLetter(): string {
-    return this._chainLetters[this.combo.current] ?? this._chainLetters[0]
+    if (this.currentLaneIndex !== null) return this.lanes[this.currentLaneIndex].currentLetter
+    return ''
   }
 
-  /** 获取整条链条的字母序列 */
-  getChainLetters(): readonly string[] {
-    return this._chainLetters
+  get currentLane(): number | null { return this.currentLaneIndex }
+  get laneCount(): number { return this.lanes.length }
+
+  getLane(index: number): Lane { return this.lanes[index] }
+
+  getChainLetters(laneIndex?: number): readonly string[] {
+    const idx = laneIndex ?? this.currentLaneIndex ?? 0
+    return this.lanes[idx].chainLetters
   }
 
-  private regenerateAllLetters(): void {
-    for (let i = 0; i < this._chainLetters.length; i++) {
-      this._chainLetters[i] = this.letters.next()
-    }
+  getPlantStates(laneIndex?: number): readonly PlantState[] {
+    const idx = laneIndex ?? 0
+    return this.lanes[idx].getPlantStates()
+  }
+
+  getZombieLane(zombieId: string): number {
+    return this.zombieLanes.get(zombieId) ?? 0
   }
 
   get zombieCount(): number {
@@ -122,16 +142,11 @@ export class BattleManager {
   }
 
   get projectileCount(): number {
-    // getByTag only returns flushed entities; after firing use pending count too
     return this._pendingProjectiles + this.entityManager.getByTag('projectile').length
   }
 
   getZombies(): ZombieEntity[] {
     return this.entityManager.getByTag('zombie') as ZombieEntity[]
-  }
-
-  getPlantStates(): readonly PlantState[] {
-    return this.plantChain.getStates()
   }
 
   getEntityManager(): EntityManager {
@@ -196,17 +211,21 @@ export class BattleManager {
     const { canvasWidth } = this.config
     const id = `zombie_${this.zombieIdCounter++}`
     const spawnX = canvasWidth + 20
-    const zombie = new ZombieEntity(id, spawnX, this.laneY, zombieConfig.hp, zombieConfig.speed, zombieConfig.chewDps)
 
-    // Set chew target to rightmost alive plant
-    this.assignChewTarget(zombie)
+    // Randomly assign to a lane
+    const laneIdx = Math.floor(Math.random() * this.lanes.length)
+    const lane = this.lanes[laneIdx]
+    const zombie = new ZombieEntity(id, spawnX, lane.laneY, zombieConfig.hp, zombieConfig.speed, zombieConfig.chewDps)
+
+    this.zombieLanes.set(id, laneIdx)
+    this.assignChewTarget(zombie, lane)
     this.entityManager.add(zombie)
   }
 
-  private assignChewTarget(zombie: ZombieEntity): void {
-    const plantIdx = this.plantChain.getRightmostAlivePlantIndex()
+  private assignChewTarget(zombie: ZombieEntity, lane: Lane): void {
+    const plantIdx = lane.getRightmostAlivePlantIndex()
     if (plantIdx >= 0) {
-      zombie.setChewTarget(this.plantPositions[plantIdx] + this.plantWidths[plantIdx])
+      zombie.setChewTarget(lane.plantPositions[plantIdx] + lane.plantWidths[plantIdx])
     }
   }
 
@@ -217,26 +236,30 @@ export class BattleManager {
       if (z.state !== ZombieState.Chewing) continue
 
       const damage = z.getChewDamage(dt)
-      const plantIdx = this.plantChain.getRightmostAlivePlantIndex()
+      const laneIdx = this.zombieLanes.get(z.id) ?? 0
+      const lane = this.lanes[laneIdx]
+      const plantIdx = lane.getRightmostAlivePlantIndex()
       if (plantIdx < 0) continue
 
-      this.plantChain.takeDamage(plantIdx, damage)
+      lane.takeDamage(plantIdx, damage)
 
-      // If that plant just died, reassign all chewing zombies
-      if (!this.plantChain.getStates()[plantIdx].alive) {
-        this.reassignAllChewTargets()
+      // If that plant just died, reassign chewing zombies in that lane
+      if (!lane.getPlantStates()[plantIdx].alive) {
+        this.reassignChewTargetsForLane(laneIdx)
       }
     }
   }
 
-  private reassignAllChewTargets(): void {
+  private reassignChewTargetsForLane(laneIdx: number): void {
+    const lane = this.lanes[laneIdx]
     const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
-    const plantIdx = this.plantChain.getRightmostAlivePlantIndex()
+    const plantIdx = lane.getRightmostAlivePlantIndex()
     for (let i = 0; i < zombies.length; i++) {
       const z = zombies[i]
       if (z.state === ZombieState.Dead) continue
+      if ((this.zombieLanes.get(z.id) ?? 0) !== laneIdx) continue
       if (plantIdx >= 0) {
-        z.setChewTarget(this.plantPositions[plantIdx] + this.plantWidths[plantIdx])
+        z.setChewTarget(lane.plantPositions[plantIdx] + lane.plantWidths[plantIdx])
       } else {
         z.clearChewTarget()
       }
@@ -275,6 +298,7 @@ export class BattleManager {
       if (z.active && z.x + z.width < 0) {
         this._missedCount++
         this.processedInWave++
+        this.zombieLanes.delete(z.id)
         this.entityManager.remove(z)
 
         if (this._missedCount >= this.config.missedLimit) {
@@ -294,8 +318,20 @@ export class BattleManager {
     const allProcessed = this.processedInWave >= wave.count
 
     if (allSpawned && allProcessed) {
-      this.combo.reset()
-      this.regenerateAllLetters()
+      // Reset all lanes
+      for (let i = 0; i < this.lanes.length; i++) {
+        this.lanes[i].resetCombo()
+      }
+      this.currentLaneIndex = null
+      this.ensureNoLetterConflict()
+      // Regenerate all lanes' letters
+      for (let i = 0; i < this.lanes.length; i++) {
+        const otherFirstLetters = this.lanes
+          .filter((_, idx) => idx !== i)
+          .map(l => l.currentLetter)
+        this.lanes[i].regenerateLetters(otherFirstLetters)
+      }
+
       this._currentWave++
       if (this._currentWave >= this.config.waves.length) {
         this._status = BattleStatus.Victory
@@ -309,38 +345,82 @@ export class BattleManager {
   onKeyDown(key: string): void {
     if (this._status !== BattleStatus.Fighting) return
 
-    const action = classifyInput(key, this.currentLetter)
-    let settlement = null
+    // Ignore function/modifier keys
+    if (key.length > 1 || IGNORED_KEYS.has(key)) return
 
-    if (action === InputAction.LetterHit) {
-      settlement = this.combo.hit()
-    } else if (action === InputAction.LetterMiss) {
-      settlement = this.combo.miss()
-    } else if (action === InputAction.Space) {
-      settlement = this.combo.settle()
-    } else {
+    if (key === ' ') {
+      // Space: settle current lane
+      if (this.currentLaneIndex === null) return
+      const settlement = this.lanes[this.currentLaneIndex].settle()
+      if (settlement) {
+        this.executeSettlement(this.currentLaneIndex, settlement.comboCount, settlement.isFullChain)
+        this.onLaneSettled(this.currentLaneIndex)
+      }
+      this.currentLaneIndex = null
       return
     }
 
-    if (settlement) {
-      this.executeSettlement(settlement.comboCount, settlement.isFullChain)
-      this.regenerateAllLetters()
-    } else if (action === InputAction.LetterHit) {
-      // combo already advanced — the old position letter was consumed, no need to regenerate
-      // (it will show as "already typed" visually)
+    const lower = key.toLowerCase()
+
+    if (this.currentLaneIndex !== null) {
+      // Locked to a lane
+      const lane = this.lanes[this.currentLaneIndex]
+      if (lower === lane.currentLetter) {
+        // Hit
+        const settlement = lane.hit()
+        if (settlement) {
+          this.executeSettlement(this.currentLaneIndex, settlement.comboCount, settlement.isFullChain)
+          this.onLaneSettled(this.currentLaneIndex)
+          this.currentLaneIndex = null
+        }
+      } else {
+        // Miss
+        const settlement = lane.miss()
+        if (settlement) {
+          this.executeSettlement(this.currentLaneIndex, settlement.comboCount, settlement.isFullChain)
+          this.onLaneSettled(this.currentLaneIndex)
+        }
+        this.currentLaneIndex = null
+      }
+    } else {
+      // Free match: scan all non-empty lanes for matching currentLetter
+      for (let i = 0; i < this.lanes.length; i++) {
+        const lane = this.lanes[i]
+        if (lane.isEmpty) continue
+        if (lower === lane.currentLetter) {
+          this.currentLaneIndex = i
+          const settlement = lane.hit()
+          if (settlement) {
+            this.executeSettlement(i, settlement.comboCount, settlement.isFullChain)
+            this.onLaneSettled(i)
+            this.currentLaneIndex = null
+          }
+          return
+        }
+      }
+      // No match found — ignore
     }
   }
 
-  private executeSettlement(comboCount: number, isFullChain: boolean): void {
-    const plants = this.plantChain.getStates()
+  private onLaneSettled(laneIndex: number): void {
+    const otherFirstLetters = this.lanes
+      .filter((_, idx) => idx !== laneIndex)
+      .map(l => l.currentLetter)
+    this.lanes[laneIndex].regenerateLetters(otherFirstLetters)
+  }
+
+  private executeSettlement(laneIndex: number, comboCount: number, isFullChain: boolean): void {
+    const lane = this.lanes[laneIndex]
+    const plants = lane.getPlantStates()
     const result = calculateSettlement(plants, comboCount, isFullChain, this.config.synergyMultiplier)
 
     const { synthesizedEffect, perPlantPower, aliveActivatedIndices } = result
 
     for (let i = 0; i < aliveActivatedIndices.length; i++) {
       const plantIdx = aliveActivatedIndices[i]
-      const px = this.plantPositions[plantIdx] + this.plantWidths[plantIdx] / 2
-      const py = this.laneY + 30
+      const px = lane.plantPositions[plantIdx] + lane.plantWidths[plantIdx] / 2
+      const py = lane.laneY + 30
+
       const power = perPlantPower[i]
 
       if (synthesizedEffect.trajectory === 'area') {
@@ -365,8 +445,8 @@ export class BattleManager {
     }
 
     if (isFullChain) {
-      this.plantChain.healOnFullChain(this.config.healAmount)
-      this.reassignAllChewTargets()
+      lane.healOnFullChain(this.config.healAmount)
+      this.reassignChewTargetsForLane(laneIndex)
     }
   }
 

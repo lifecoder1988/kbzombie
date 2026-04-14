@@ -5,7 +5,7 @@ export const enum InputAction {
   Ignore = 3,
 }
 
-const IGNORED_KEYS = new Set([
+export const IGNORED_KEYS = new Set([
   'Shift', 'Control', 'Alt', 'Meta',
   'Escape', 'Tab', 'CapsLock', 'Enter', 'Backspace',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',

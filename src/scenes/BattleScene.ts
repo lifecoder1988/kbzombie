@@ -66,7 +66,8 @@ export class BattleScene implements Scene {
     }
 
     this.manager = new BattleManager({
-      plants,
+      laneCount: 1,
+      lanePlants: [plants],
       waves: level.waves,
       zombieConfigs,
       letterPool: stage.letters,
@@ -115,9 +116,9 @@ export class BattleScene implements Scene {
 
     this.manager.update(dt)
 
-    const plantStates = this.manager.getPlantStates()
+    const plantStates = this.manager.getPlantStates(0)
     const comboCount = this.manager.comboCount
-    const chainLetters = this.manager.getChainLetters()
+    const chainLetters = this.manager.getChainLetters(0)
 
     let segOffset = 0
     for (let i = 0; i < this.plantEntities.length; i++) {
