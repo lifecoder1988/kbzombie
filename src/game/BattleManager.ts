@@ -63,12 +63,20 @@ export class BattleManager {
     // Calculate lane Y positions
     const laneYPositions = this.calculateLaneYPositions(config.laneCount, config.canvasHeight)
 
+    // Calculate max total segments across all lanes (for consistent plant width)
+    let maxTotalSegments = 0
+    for (let i = 0; i < config.laneCount; i++) {
+      const plants = config.lanePlants[i] ?? []
+      const seg = plants.reduce((s, p) => s + p.comboSegment, 0)
+      if (seg > maxTotalSegments) maxTotalSegments = seg
+    }
+
     // Create lanes
     this.lanes = []
     for (let i = 0; i < config.laneCount; i++) {
       const plants = config.lanePlants[i] ?? []
       const seed = config.letterSeed !== undefined ? config.letterSeed + i * 1000 : undefined
-      const lane = new Lane(i, plants, config.letterPool, laneYPositions[i], config.canvasWidth, seed)
+      const lane = new Lane(i, plants, config.letterPool, laneYPositions[i], config.canvasWidth, maxTotalSegments, seed)
       this.lanes.push(lane)
     }
 

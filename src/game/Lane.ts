@@ -21,6 +21,7 @@ export class Lane {
     letterPool: readonly string[],
     laneY: number,
     canvasWidth: number,
+    maxTotalSegments: number,
     letterSeed?: number,
   ) {
     this.index = index
@@ -33,20 +34,20 @@ export class Lane {
     const totalSeg = plants.reduce((s, p) => s + p.comboSegment, 0)
     this._chainLetters = Array.from({ length: totalSeg }, () => this.letterProvider.next())
 
-    // Plant layout: same logic as current BattleManager
+    // Plant layout: width per segment is global (based on maxTotalSegments across all lanes)
     const plantAreaWidth = canvasWidth * 0.35
-    const gap = 8
-    const totalGap = gap * Math.max(0, plants.length - 1)
-    const usableWidth = plantAreaWidth - totalGap
+    const refSegments = maxTotalSegments > 0 ? maxTotalSegments : Math.max(totalSeg, 1)
+    const maxGap = 8
+    const widthPerSegment = (plantAreaWidth - maxGap * Math.max(0, plants.length - 1)) / refSegments
     const startX = 20
     this.plantPositions = []
     this.plantWidths = []
     let curX = startX
     for (let i = 0; i < plants.length; i++) {
-      const w = totalSeg > 0 ? Math.round((plants[i].comboSegment / totalSeg) * usableWidth) : 0
+      const w = Math.round(plants[i].comboSegment * widthPerSegment)
       this.plantPositions.push(curX)
       this.plantWidths.push(w)
-      curX += w + gap
+      curX += w + maxGap
     }
   }
 
