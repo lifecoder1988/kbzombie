@@ -413,6 +413,60 @@ describe('多路僵尸', () => {
   })
 })
 
+describe('复活植物后僵尸不回头', () => {
+  it('僵尸已走过复活植物的位置时不被传送回去', () => {
+    // 1 plant, slow zombie with instant kill chewDps, wide canvas to prevent off-screen
+    const singlePlant: PlantConfig[] = [
+      { id: 'p', name: 'P', comboSegment: 4, attackPower: 100, hp: 10, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
+    ]
+    const toughZombie = { hp: 9999, speed: 20, chewDps: 1000, width: 40, height: 60, color: '#44cc44' }
+    const mgr = createManager({
+      lanePlants: [singlePlant],
+      waves: [{ zombieType: 'tough', count: 1, interval: 100 }],
+      zombieConfigs: { tough: toughZombie },
+      missedLimit: 10,
+      canvasWidth: 2000,
+    })
+
+    // Spawn zombie
+    mgr.update(200)
+    mgr.update(16) // flush
+
+    const lane = mgr.getLane(0)
+    const plantRightEdge = lane.plantPositions[0] + lane.plantWidths[0]
+
+    // Walk zombie to plant, kill it, then walk a bit further left (but not off screen)
+    // Distance from spawn (2020) to plant right edge (~800): ~1220px at 20px/s = ~61s
+    // Total 80s simulation: zombie reaches ~2020-20*80=420, plant killed, still on screen
+    for (let i = 0; i < 800; i++) mgr.update(100)
+
+    const zombies = mgr.getZombies()
+    expect(zombies.length).toBe(1) // zombie should still be on screen
+
+    const z = zombies[0]
+    const plant = mgr.getPlantStates(0)[0]
+    expect(plant.alive).toBe(false) // plant is dead
+    expect(z.x).toBeLessThan(plantRightEdge) // zombie walked past plant
+
+    const xBeforeRevival = z.x
+
+    // Trigger full chain to revive the plant
+    for (let i = 0; i < 4; i++) {
+      const letter = mgr.currentLane !== null ? mgr.currentLetter : mgr.getLane(0).currentLetter
+      mgr.onKeyDown(letter)
+    }
+
+    // Plant should be alive again
+    expect(mgr.getPlantStates(0)[0].alive).toBe(true)
+
+    // Run one update tick — this is where the teleport bug would manifest
+    mgr.update(16)
+
+    // Zombie must NOT have been teleported back
+    expect(zombies[0].x).toBeLessThanOrEqual(xBeforeRevival)
+  })
+})
+
 describe('多路波次完成', () => {
   it('波次完成时所有路连击归零并解锁', () => {
     // Use a single very weak zombie that dies quickly

@@ -269,10 +269,23 @@ export class BattleManager {
   }
 
   private assignChewTarget(zombie: ZombieEntity, lane: Lane): void {
-    const plantIdx = lane.getRightmostAlivePlantIndex()
-    if (plantIdx >= 0) {
-      zombie.setChewTarget(lane.plantPositions[plantIdx] + lane.plantWidths[plantIdx])
+    const plants = lane.getPlantStates()
+    for (let i = plants.length - 1; i >= 0; i--) {
+      if (!plants[i].alive) continue
+      const plantRightEdge = lane.plantPositions[i] + lane.plantWidths[i]
+      if (plantRightEdge <= zombie.x) {
+        // Plant is ahead of zombie — walk to its right edge
+        zombie.setChewTarget(plantRightEdge)
+        return
+      }
+      if (lane.plantPositions[i] <= zombie.x) {
+        // Zombie overlaps with plant — chew at current position
+        zombie.setChewTarget(zombie.x)
+        return
+      }
     }
+    // No alive plant ahead of or overlapping with zombie
+    zombie.clearChewTarget()
   }
 
   private updateChewing(dt: number): void {
@@ -299,16 +312,11 @@ export class BattleManager {
   private reassignChewTargetsForLane(laneIdx: number): void {
     const lane = this.lanes[laneIdx]
     const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
-    const plantIdx = lane.getRightmostAlivePlantIndex()
     for (let i = 0; i < zombies.length; i++) {
       const z = zombies[i]
       if (z.state === ZombieState.Dead) continue
       if ((this.zombieLanes.get(z.id) ?? 0) !== laneIdx) continue
-      if (plantIdx >= 0) {
-        z.setChewTarget(lane.plantPositions[plantIdx] + lane.plantWidths[plantIdx])
-      } else {
-        z.clearChewTarget()
-      }
+      this.assignChewTarget(z, lane)
     }
   }
 
