@@ -289,10 +289,23 @@ export class BattleManager {
 
   private updateTrackingTargets(): void {
     const projectiles = this.entityManager.getByTag('projectile') as ProjectileEntity[]
+    const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
     for (let i = 0; i < projectiles.length; i++) {
       const proj = projectiles[i]
       if (!proj.active || proj.flight !== 'tracking') continue
-      const nearest = this.findNearestZombie(proj.x, proj.y)
+      // Find nearest zombie that this projectile hasn't already hit
+      let nearest: ZombieEntity | undefined
+      let minDist = Infinity
+      for (const z of zombies) {
+        if (!z.active || proj.hasHit(z.id)) continue
+        const dx = z.x - proj.x
+        const dy = z.y - proj.y
+        const dist = dx * dx + dy * dy
+        if (dist < minDist) {
+          minDist = dist
+          nearest = z
+        }
+      }
       proj.setTarget(nearest ?? null)
     }
   }
