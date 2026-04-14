@@ -242,18 +242,28 @@ export class BattleManager {
       const proj = projectiles[pi]
       if (!proj.active) continue
 
+      // 直射弹道：命中路径上最靠近植物（x 最小）的僵尸
+      // 包括已经走到弹道发射点左边的僵尸（弹道飞过它们时瞬时命中）
+      let nearest: ZombieEntity | null = null
       for (let zi = 0; zi < zombies.length; zi++) {
         const z = zombies[zi]
         if (!z.active) continue
 
-        if (intersects(proj, z)) {
-          z.takeDamage(proj.power)
-          proj.onHit()
-          if (!z.active) {
-            // zombie dead - count as processed
-            this.processedInWave++
+        // 僵尸在弹道左侧（已走过发射点）→ 直接算命中
+        // 僵尸在弹道右侧 → 用 AABB 碰撞检测
+        const hit = z.x + z.width < proj.x || intersects(proj, z)
+        if (hit) {
+          if (!nearest || z.x < nearest.x) {
+            nearest = z
           }
-          break
+        }
+      }
+
+      if (nearest) {
+        nearest.takeDamage(proj.power)
+        proj.onHit()
+        if (!nearest.active) {
+          this.processedInWave++
         }
       }
     }
