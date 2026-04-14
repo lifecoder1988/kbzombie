@@ -3,7 +3,7 @@ import type { PlantConfig } from '../game/types'
 import { BattleStatus } from '../game/types'
 import { BattleManager } from '../game/BattleManager'
 import { PlantEntity } from '../game/PlantEntity'
-import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATTLE_PARAMS } from '../config'
+import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATTLE_PARAMS, SYNERGY_PARAMS } from '../config'
 import { validateConfig } from '../config/validation'
 
 export class BattleScene implements Scene {
@@ -20,7 +20,7 @@ export class BattleScene implements Scene {
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
-    const errors = validateConfig(PLANT_DEFS, ZOMBIE_DEFS, STAGES)
+    const errors = validateConfig(PLANT_DEFS, ZOMBIE_DEFS, STAGES, SYNERGY_PARAMS, BATTLE_PARAMS)
     if (errors.length > 0) {
       console.error('配置校验失败:')
       for (const e of errors) console.error('  -', e)

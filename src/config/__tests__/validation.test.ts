@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { validateConfig } from '../validation'
-import type { PlantDef, ZombieDef, StageDef } from '../types'
+import type { PlantDef, ZombieDef, StageDef, SynergyDef, BattleDef } from '../types'
 
 const validPlants: PlantDef[] = [
-  { id: 'p1', name: 'Plant1', comboSegment: 4, attackPower: 10, hp: 100 },
-  { id: 'p2', name: 'Plant2', comboSegment: 8, attackPower: 20, hp: 80 },
+  { id: 'p1', name: 'Plant1', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
+  { id: 'p2', name: 'Plant2', comboSegment: 8, attackPower: 20, hp: 80, element: 'ice', trajectory: 'direct' },
 ]
 
 const validZombies: Record<string, ZombieDef> = {
@@ -26,34 +26,48 @@ const validStages: StageDef[] = [
   },
 ]
 
+const validSynergy: SynergyDef = {
+  multiplier: { 1: 1.0, 2: 1.2, 3: 1.5 },
+}
+
+const validBattle: BattleDef = {
+  projectileSpeed: 500,
+  healAmount: 30,
+  wavePauseDuration: 3000,
+  areaBulletCount: 5,
+  areaSpreadAngle: Math.PI / 3,
+  areaDamageDecay: 1.0,
+  trackingTurnRate: Math.PI,
+}
+
 describe('validateConfig', () => {
   it('合法配置返回空错误列表', () => {
-    const errors = validateConfig(validPlants, validZombies, validStages)
+    const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, validBattle)
     expect(errors).toEqual([])
   })
 
   it('植物 id 重复报错', () => {
     const plants: PlantDef[] = [
-      { id: 'dup', name: 'A', comboSegment: 4, attackPower: 10, hp: 100 },
-      { id: 'dup', name: 'B', comboSegment: 4, attackPower: 10, hp: 100 },
+      { id: 'dup', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
+      { id: 'dup', name: 'B', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
     ]
-    const errors = validateConfig(plants, validZombies, validStages)
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('dup'))).toBe(true)
   })
 
   it('植物 comboSegment <= 0 报错', () => {
     const plants: PlantDef[] = [
-      { id: 'bad', name: 'Bad', comboSegment: 0, attackPower: 10, hp: 100 },
+      { id: 'bad', name: 'Bad', comboSegment: 0, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
     ]
-    const errors = validateConfig(plants, validZombies, validStages)
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('comboSegment'))).toBe(true)
   })
 
   it('植物 hp <= 0 报错', () => {
     const plants: PlantDef[] = [
-      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 0 },
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 0, element: 'normal', trajectory: 'direct' },
     ]
-    const errors = validateConfig(plants, validZombies, validStages)
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('hp'))).toBe(true)
   })
 
@@ -64,7 +78,7 @@ describe('validateConfig', () => {
         levels: [{ id: 1, waves: [{ zombieType: 'ghost', count: 5, interval: 3000 }] }],
       },
     ]
-    const errors = validateConfig(validPlants, validZombies, stages)
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('ghost'))).toBe(true)
   })
 
@@ -75,7 +89,7 @@ describe('validateConfig', () => {
         levels: [{ id: 1, waves: [{ zombieType: 'normal', count: 5, interval: 3000 }] }],
       },
     ]
-    const errors = validateConfig(validPlants, validZombies, stages)
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('nonexist'))).toBe(true)
   })
 
@@ -86,7 +100,7 @@ describe('validateConfig', () => {
         levels: [{ id: 1, waves: [{ zombieType: 'normal', count: 0, interval: 3000 }] }],
       },
     ]
-    const errors = validateConfig(validPlants, validZombies, stages)
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('count'))).toBe(true)
   })
 
@@ -97,7 +111,53 @@ describe('validateConfig', () => {
         levels: [{ id: 1, waves: [{ zombieType: 'normal', count: 5, interval: 3000 }] }],
       },
     ]
-    const errors = validateConfig(validPlants, validZombies, stages)
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
     expect(errors.some(e => e.includes('letters'))).toBe(true)
+  })
+
+  it('植物 element 非法值报错', () => {
+    const plants = [
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'lightning' as any, trajectory: 'direct' as any },
+    ]
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('element'))).toBe(true)
+  })
+
+  it('植物 trajectory 非法值报错', () => {
+    const plants = [
+      { id: 'bad', name: 'Bad', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal' as any, trajectory: 'laser' as any },
+    ]
+    const errors = validateConfig(plants, validZombies, validStages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('trajectory'))).toBe(true)
+  })
+
+  it('synergy multiplier 缺少 key=1 报错', () => {
+    const synergy: SynergyDef = { multiplier: { 2: 1.2 } }
+    const errors = validateConfig(validPlants, validZombies, validStages, synergy, validBattle)
+    expect(errors.some(e => e.includes('multiplier'))).toBe(true)
+  })
+
+  it('synergy multiplier key=1 的值不为 1.0 报错', () => {
+    const synergy: SynergyDef = { multiplier: { 1: 1.5 } }
+    const errors = validateConfig(validPlants, validZombies, validStages, synergy, validBattle)
+    expect(errors.some(e => e.includes('1.0'))).toBe(true)
+  })
+
+  it('areaBulletCount < 1 报错', () => {
+    const battle = { ...validBattle, areaBulletCount: 0 }
+    const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
+    expect(errors.some(e => e.includes('areaBulletCount'))).toBe(true)
+  })
+
+  it('areaSpreadAngle <= 0 报错', () => {
+    const battle = { ...validBattle, areaSpreadAngle: 0 }
+    const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
+    expect(errors.some(e => e.includes('areaSpreadAngle'))).toBe(true)
+  })
+
+  it('areaDamageDecay <= 0 报错', () => {
+    const battle = { ...validBattle, areaDamageDecay: -1 }
+    const errors = validateConfig(validPlants, validZombies, validStages, validSynergy, battle)
+    expect(errors.some(e => e.includes('areaDamageDecay'))).toBe(true)
   })
 })
