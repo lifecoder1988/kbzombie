@@ -36,6 +36,10 @@ export class ZombieEntity implements Entity {
 
   setChewTarget(targetX: number): void {
     this.chewTargetX = targetX
+    // 如果新目标在当前位置左边，需要继续走过去
+    if (this._state === ZombieState.Chewing && targetX < this.x) {
+      this._state = ZombieState.Walking
+    }
   }
 
   clearChewTarget(): void {
