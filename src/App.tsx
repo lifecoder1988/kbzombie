@@ -4,7 +4,8 @@ import { GameLoop } from './engine/GameLoop'
 import { SceneManager } from './engine/SceneManager'
 import { InputManager } from './engine/InputManager'
 import { Renderer } from './engine/Renderer'
-import { MenuScene, BattleScene } from './demo/DemoScene'
+import { MenuScene } from './scenes/MenuScene'
+import { BattleScene } from './scenes/BattleScene'
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
