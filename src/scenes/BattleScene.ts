@@ -11,7 +11,7 @@ export class BattleScene implements Scene {
   private switchTo: (name: string) => void
 
   private manager: BattleManager | null = null
-  private plantEntities: PlantEntity[] = []
+  private laneEntities: PlantEntity[][] = []
   private paused = false
   private canvasWidth = 0
   private canvasHeight = 0
@@ -40,20 +40,29 @@ export class BattleScene implements Scene {
     const stage = STAGES[this.stageIndex]
     const level = stage.levels[this.levelIndex]
     const difficulty = DIFFICULTIES[DEFAULT_DIFFICULTY]
+    const laneCount = level.laneCount ?? 1
 
-    // PlantDef → PlantConfig
-    const plants: PlantConfig[] = stage.plants.map(id => {
-      const def = PLANT_DEFS.find(p => p.id === id)!
-      return {
-        id: def.id,
-        name: def.name,
-        comboSegment: def.comboSegment,
-        attackPower: def.attackPower,
-        hp: def.hp,
-        element: def.element,
-        trajectory: def.trajectory,
-      }
-    })
+    // Helper: resolve plant IDs → PlantConfig[]
+    const resolvePlants = (ids: readonly string[]): PlantConfig[] =>
+      ids.map(id => {
+        const def = PLANT_DEFS.find(p => p.id === id)!
+        return {
+          id: def.id,
+          name: def.name,
+          comboSegment: def.comboSegment,
+          attackPower: def.attackPower,
+          hp: def.hp,
+          element: def.element,
+          trajectory: def.trajectory,
+        }
+      })
+
+    // Build per-lane PlantConfig arrays
+    const lanePlants: PlantConfig[][] = []
+    for (let i = 0; i < laneCount; i++) {
+      const ids = level.lanePlants?.[i] ?? stage.plants
+      lanePlants.push(resolvePlants(ids))
+    }
 
     // ZombieDef → ZombieConfig (apply difficulty speed multiplier)
     const zombieConfigs: Record<string, { hp: number; speed: number; chewDps: number }> = {}
@@ -66,8 +75,8 @@ export class BattleScene implements Scene {
     }
 
     this.manager = new BattleManager({
-      laneCount: 1,
-      lanePlants: [plants],
+      laneCount,
+      lanePlants,
       waves: level.waves,
       zombieConfigs,
       letterPool: stage.letters,
@@ -84,28 +93,28 @@ export class BattleScene implements Scene {
       trackingTurnRate: BATTLE_PARAMS.trackingTurnRate,
     })
 
-    // Plant entity layout (layout ratios stay in code, not config)
-    const plantAreaWidth = this.canvasWidth * 0.35
-    const laneY = Math.round(this.canvasHeight * 0.4)
-    const totalSegments = plants.reduce((s, p) => s + p.comboSegment, 0)
-    const gap = 8
-    const totalGap = gap * (plants.length - 1)
-    const usableWidth = plantAreaWidth - totalGap
-    const startX = 20
-
-    this.plantEntities = []
-    let curX = startX
-    for (let i = 0; i < plants.length; i++) {
-      const w = Math.round((plants[i].comboSegment / totalSegments) * usableWidth)
-      const entity = new PlantEntity(`plant_${i}`, curX, laneY - 30, w, i)
-      this.plantEntities.push(entity)
-      curX += w + gap
+    // Build plant entities per lane using manager's lane layout
+    this.laneEntities = []
+    for (let i = 0; i < laneCount; i++) {
+      const lane = this.manager.getLane(i)
+      const entities: PlantEntity[] = []
+      for (let j = 0; j < lane.plants.length; j++) {
+        const entity = new PlantEntity(
+          `plant_${i}_${j}`,
+          lane.plantPositions[j],
+          lane.laneY - 30,
+          lane.plantWidths[j],
+          j,
+        )
+        entities.push(entity)
+      }
+      this.laneEntities.push(entities)
     }
   }
 
   exit(): void {
     this.manager = null
-    this.plantEntities = []
+    this.laneEntities = []
   }
 
   update(dt: number): void {
@@ -116,21 +125,24 @@ export class BattleScene implements Scene {
 
     this.manager.update(dt)
 
-    const plantStates = this.manager.getPlantStates(0)
-    const comboCount = this.manager.comboCount
-    const chainLetters = this.manager.getChainLetters(0)
+    for (let li = 0; li < this.manager.laneCount; li++) {
+      const lane = this.manager.getLane(li)
+      const plantStates = lane.getPlantStates()
+      const comboCount = lane.comboCount
+      const chainLetters = lane.chainLetters
+      const isCurrentLane = this.manager.currentLane === li
 
-    let segOffset = 0
-    for (let i = 0; i < this.plantEntities.length; i++) {
-      const entity = this.plantEntities[i]
-      if (i >= plantStates.length) break
-
-      const segments = plantStates[i].config.comboSegment
-      entity.syncState(plantStates[i])
-      entity.letters = chainLetters.slice(segOffset, segOffset + segments) as string[]
-      entity.typedCount = Math.max(0, Math.min(segments, comboCount - segOffset))
-      entity.isCurrentTarget = comboCount >= segOffset && comboCount < segOffset + segments
-      segOffset += segments
+      let segOffset = 0
+      const entities = this.laneEntities[li]
+      for (let i = 0; i < entities.length; i++) {
+        if (i >= plantStates.length) break
+        const segments = plantStates[i].config.comboSegment
+        entities[i].syncState(plantStates[i])
+        entities[i].letters = chainLetters.slice(segOffset, segOffset + segments) as string[]
+        entities[i].typedCount = Math.max(0, Math.min(segments, comboCount - segOffset))
+        entities[i].isCurrentTarget = isCurrentLane && comboCount >= segOffset && comboCount < segOffset + segments
+        segOffset += segments
+      }
     }
   }
 
@@ -142,18 +154,25 @@ export class BattleScene implements Scene {
     ctx.fillStyle = '#2d5a1e'
     ctx.fillRect(0, 0, w, h)
 
-    // Lane line
-    const laneY = Math.round(h * 0.4)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(0, laneY + 60)
-    ctx.lineTo(w, laneY + 60)
-    ctx.stroke()
+    // Lane lines (highlight current lane)
+    if (this.manager) {
+      for (let li = 0; li < this.manager.laneCount; li++) {
+        const lane = this.manager.getLane(li)
+        const isCurrentLane = this.manager.currentLane === li
+        ctx.strokeStyle = isCurrentLane ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 255, 255, 0.15)'
+        ctx.lineWidth = isCurrentLane ? 2 : 1
+        ctx.beginPath()
+        ctx.moveTo(0, lane.laneY + 60)
+        ctx.lineTo(w, lane.laneY + 60)
+        ctx.stroke()
+      }
+    }
 
-    // Render plant entities
-    for (let i = 0; i < this.plantEntities.length; i++) {
-      this.plantEntities[i].render(ctx)
+    // Render plant entities from all lanes
+    for (const laneEnts of this.laneEntities) {
+      for (const entity of laneEnts) {
+        entity.render(ctx)
+      }
     }
 
     // Render manager entity manager (zombies + projectiles)
@@ -184,7 +203,18 @@ export class BattleScene implements Scene {
         ctx.textAlign = 'right'
         ctx.fillStyle = '#ffd700'
         ctx.font = 'bold 20px monospace'
-        ctx.fillText(`按: ${letter.toUpperCase()}`, w - 10, 25)
+        if (letter) {
+          // Locked to a lane — show current expected key
+          ctx.fillText(`按: ${letter.toUpperCase()}`, w - 10, 25)
+        } else {
+          // Free match — show each lane's first key
+          const laneLetters: string[] = []
+          for (let li = 0; li < this.manager.laneCount; li++) {
+            const l = this.manager.getLane(li)
+            if (!l.isEmpty) laneLetters.push(l.currentLetter.toUpperCase())
+          }
+          if (laneLetters.length > 0) ctx.fillText(`按: ${laneLetters.join(' / ')}`, w - 10, 25)
+        }
       }
 
       if (status === BattleStatus.WavePause) {
