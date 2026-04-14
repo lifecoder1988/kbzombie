@@ -271,7 +271,11 @@
 
 | 文档 | 说明 |
 |------|------|
-| [GAME_DESIGN.md](./GAME_DESIGN.md) | 详细游戏设计（机制、数值、配置结构） |
+| [GAME_DESIGN.md](./GAME_DESIGN.md) | 游戏设计索引（概述、架构、优先级）+ 子文档链接 |
+| [BATTLE_MECHANICS.md](./BATTLE_MECHANICS.md) | 战斗机制详细设计（打字、连击、结算、波次、多路） |
+| [PLANTS_AND_EFFECTS.md](./PLANTS_AND_EFFECTS.md) | 植物与特效系统（属性、Slot、四维特效合成、协同） |
+| [ZOMBIES_AND_STAGES.md](./ZOMBIES_AND_STAGES.md) | 僵尸与阶段进度（僵尸属性/状态、指法阶段、反馈） |
+| [CONFIG_REFERENCE.md](./CONFIG_REFERENCE.md) | 数据模型与策略配置示例 |
 | ROADMAP.md（本文档） | 开发路线图与进度跟踪 |
 | [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) | 测试策略（四层测试、无头集成、AI 测试流程） |
 | [plans/2026-04-13-stage1-game-engine.md](./plans/2026-04-13-stage1-game-engine.md) | 阶段一实现计划（已完成） |

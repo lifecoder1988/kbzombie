@@ -4,7 +4,7 @@
 
 - 面向 8-9 岁儿童的打字练习游戏，植物大战僵尸主题
 - 技术栈：React + Canvas，桌面端浏览器
-- 详细设计见 `docs/GAME_DESIGN.md`，开发路线见 `docs/ROADMAP.md`
+- 详细设计见 `docs/GAME_DESIGN.md`（索引）及其子文档，开发路线见 `docs/ROADMAP.md`
 
 ## 目录结构约定
 
@@ -37,7 +37,7 @@ kbzombie/
 - **游戏层不直接操作 Canvas 或 DOM**。通过引擎提供的渲染接口绘制。
 - **配置层是纯数据**。不包含逻辑代码，只有 TS 常量和类型定义（唯一例外：`validation.ts` 做语义校验）。
 - **游戏逻辑层不直接导入配置层**。场景层（scenes/）负责从 config 读取并以参数注入游戏逻辑层。
-- **配置字段名对齐 GAME_DESIGN.md**。如 `comboSegment`（非 `segments`）。
+- **配置字段名对齐设计文档**（`docs/PLANTS_AND_EFFECTS.md`、`docs/ZOMBIES_AND_STAGES.md`）。如 `comboSegment`（非 `segments`）。
 - 新增植物、僵尸、协同规则只加配置，不改引擎和游戏逻辑代码。
 
 ### 引擎层设计原则
