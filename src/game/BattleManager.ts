@@ -242,28 +242,17 @@ export class BattleManager {
       const proj = projectiles[pi]
       if (!proj.active) continue
 
-      // 直射弹道：命中路径上最靠近植物（x 最小）的僵尸
-      // 包括已经走到弹道发射点左边的僵尸（弹道飞过它们时瞬时命中）
-      let nearest: ZombieEntity | null = null
       for (let zi = 0; zi < zombies.length; zi++) {
         const z = zombies[zi]
         if (!z.active) continue
 
-        // 僵尸在弹道左侧（已走过发射点）→ 直接算命中
-        // 僵尸在弹道右侧 → 用 AABB 碰撞检测
-        const hit = z.x + z.width < proj.x || intersects(proj, z)
-        if (hit) {
-          if (!nearest || z.x < nearest.x) {
-            nearest = z
+        if (intersects(proj, z)) {
+          z.takeDamage(proj.power)
+          proj.onHit()
+          if (!z.active) {
+            this.processedInWave++
           }
-        }
-      }
-
-      if (nearest) {
-        nearest.takeDamage(proj.power)
-        proj.onHit()
-        if (!nearest.active) {
-          this.processedInWave++
+          break
         }
       }
     }
@@ -341,7 +330,7 @@ export class BattleManager {
       ? result.totalPower / result.aliveActivatedIndices.length
       : 0
     for (const plantIdx of result.aliveActivatedIndices) {
-      const px = this.plantPositions[plantIdx] + this.plantWidths[plantIdx]
+      const px = this.plantPositions[plantIdx] + this.plantWidths[plantIdx] / 2
       const py = this.laneY + 30
       const id = `proj_${this.projectileIdCounter++}`
       const proj = new ProjectileEntity(id, px, py, this.config.projectileSpeed, powerPerProjectile, this.config.canvasWidth)
