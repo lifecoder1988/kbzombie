@@ -90,20 +90,20 @@ export const STAGES: readonly StageDef[] = [
   },
   {
     id: 6,
-    name: '3路演示',
+    name: '3路演示-跨路攻击',
     letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
-    plants: ['peashooter'],
+    plants: ['sprayer', 'tracker'],
     levels: [
       {
         id: 1,
         laneCount: 3,
         lanePlants: [
-          ['peashooter', 'snow_pea'],
-          ['peashooter'],
+          ['sprayer'],
+          ['tracker'],
           [],
         ],
         waves: [
-          { zombieType: 'normal', count: 10, interval: 1500 },
+          { zombieType: 'slow', count: 12, interval: 1200 },
         ],
       },
     ],
