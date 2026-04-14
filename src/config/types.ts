@@ -1,3 +1,10 @@
+export type Element = 'normal' | 'ice' | 'fire'
+export type Trajectory = 'direct' | 'tracking' | 'pierce' | 'area'
+
+export interface SynergyDef {
+  readonly multiplier: Readonly<Record<number, number>>
+}
+
 /** 植物定义（字段名对齐 GAME_DESIGN.md 4.1） */
 export interface PlantDef {
   readonly id: string
@@ -5,6 +12,8 @@ export interface PlantDef {
   readonly comboSegment: number   // 占据的连击段数
   readonly attackPower: number    // 基础攻击力
   readonly hp: number             // 血量上限
+  readonly element: Element
+  readonly trajectory: Trajectory
 }
 
 /** 僵尸定义（字段名对齐 GAME_DESIGN.md 5.1） */
@@ -49,4 +58,8 @@ export interface BattleDef {
   readonly projectileSpeed: number
   readonly healAmount: number
   readonly wavePauseDuration: number
+  readonly areaBulletCount: number
+  readonly areaSpreadAngle: number
+  readonly areaDamageDecay: number
+  readonly trackingTurnRate: number
 }
