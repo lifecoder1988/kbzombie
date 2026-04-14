@@ -36,6 +36,8 @@ export interface WaveDef {
 export interface LevelDef {
   readonly id: number
   readonly waves: readonly WaveDef[]
+  readonly laneCount?: number                           // 路数（默认 1）
+  readonly lanePlants?: readonly (readonly string[])[]  // 每路植物 ID，长度 = laneCount
 }
 
 /** 阶段配置 */

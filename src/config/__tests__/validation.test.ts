@@ -161,3 +161,57 @@ describe('validateConfig', () => {
     expect(errors.some(e => e.includes('areaDamageDecay'))).toBe(true)
   })
 })
+
+describe('laneCount 校验', () => {
+  const makeStageWithLevel = (levelOverride: object): StageDef[] => [
+    {
+      id: 1,
+      name: 'Stage 1',
+      letters: ['f', 'j'],
+      plants: ['p1', 'p2'],
+      levels: [
+        {
+          id: 1,
+          waves: [{ zombieType: 'normal', count: 5, interval: 3000 }],
+          ...levelOverride,
+        },
+      ],
+    },
+  ]
+
+  it('laneCount 为 0 报错', () => {
+    const stages = makeStageWithLevel({ laneCount: 0 })
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('laneCount'))).toBe(true)
+  })
+
+  it('laneCount 为 4 报错', () => {
+    const stages = makeStageWithLevel({ laneCount: 4 })
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('laneCount'))).toBe(true)
+  })
+
+  it('lanePlants 长度不等于 laneCount 报错', () => {
+    const stages = makeStageWithLevel({ laneCount: 2, lanePlants: [['p1']] })
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('lanePlants'))).toBe(true)
+  })
+
+  it('lanePlants 引用不存在的植物 ID 报错', () => {
+    const stages = makeStageWithLevel({ laneCount: 1, lanePlants: [['nonexist']] })
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('nonexist'))).toBe(true)
+  })
+
+  it('lanePlants 空数组允许（空路）', () => {
+    const stages = makeStageWithLevel({ laneCount: 2, lanePlants: [[], ['p1']] })
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors).toEqual([])
+  })
+
+  it('不填 laneCount 不报错（默认 1）', () => {
+    const stages = makeStageWithLevel({})
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors).toEqual([])
+  })
+})

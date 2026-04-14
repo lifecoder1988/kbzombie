@@ -9,6 +9,7 @@ export const STAGES: readonly StageDef[] = [
     levels: [
       {
         id: 1,
+        laneCount: 1,
         waves: [
           { zombieType: 'normal', count: 5, interval: 3000 },
           { zombieType: 'normal', count: 7, interval: 2500 },
@@ -17,6 +18,7 @@ export const STAGES: readonly StageDef[] = [
       },
       {
         id: 2,
+        laneCount: 1,
         waves: [
           { zombieType: 'normal', count: 8, interval: 2000 },
           { zombieType: 'normal', count: 12, interval: 1500 },
@@ -33,6 +35,7 @@ export const STAGES: readonly StageDef[] = [
     levels: [
       {
         id: 1,
+        laneCount: 1,
         waves: [
           { zombieType: 'slow', count: 8, interval: 800 },
         ],
@@ -47,6 +50,7 @@ export const STAGES: readonly StageDef[] = [
     levels: [
       {
         id: 1,
+        laneCount: 1,
         waves: [
           { zombieType: 'slow', count: 10, interval: 600 },
         ],
@@ -61,6 +65,7 @@ export const STAGES: readonly StageDef[] = [
     levels: [
       {
         id: 1,
+        laneCount: 1,
         waves: [
           { zombieType: 'normal', count: 8, interval: 1000 },
         ],

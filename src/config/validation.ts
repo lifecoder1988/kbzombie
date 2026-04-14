@@ -42,6 +42,22 @@ export function validateConfig(
       }
     }
     for (const level of stage.levels) {
+      const effectiveLaneCount = level.laneCount ?? 1
+      if (level.laneCount !== undefined && (level.laneCount < 1 || level.laneCount > 3)) {
+        errors.push(`阶段 ${stage.id} 关卡 ${level.id} laneCount 必须为 1、2 或 3，当前: ${level.laneCount}`)
+      }
+      if (level.lanePlants !== undefined) {
+        if (level.lanePlants.length !== effectiveLaneCount) {
+          errors.push(`阶段 ${stage.id} 关卡 ${level.id} lanePlants 长度必须等于 laneCount (${effectiveLaneCount})，当前: ${level.lanePlants.length}`)
+        }
+        for (let laneIdx = 0; laneIdx < level.lanePlants.length; laneIdx++) {
+          for (const plantId of level.lanePlants[laneIdx]) {
+            if (!plantIds.has(plantId)) {
+              errors.push(`阶段 ${stage.id} 关卡 ${level.id} 第 ${laneIdx + 1} 路引用不存在的植物: "${plantId}"`)
+            }
+          }
+        }
+      }
       for (const wave of level.waves) {
         if (!(wave.zombieType in zombies)) {
           errors.push(`阶段 ${stage.id} 关卡 ${level.id} 引用不存在的僵尸类型: "${wave.zombieType}"`)
