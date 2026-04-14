@@ -337,7 +337,16 @@ export class BattleManager {
       const px = this.plantPositions[plantIdx] + this.plantWidths[plantIdx] / 2
       const py = this.laneY + 30
       const id = `proj_${this.projectileIdCounter++}`
-      const proj = new ProjectileEntity(id, px, py, this.config.projectileSpeed, powerPerProjectile, this.config.canvasWidth)
+      const proj = new ProjectileEntity({
+        id,
+        x: px,
+        y: py,
+        speed: this.config.projectileSpeed,
+        power: powerPerProjectile,
+        rightBound: this.config.canvasWidth,
+        trajectory: 'direct',
+        element: 'normal',
+      })
       this.entityManager.add(proj)
       this._pendingProjectiles++
     }
