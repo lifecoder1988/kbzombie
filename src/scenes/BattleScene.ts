@@ -52,15 +52,22 @@ export class BattleScene implements Scene {
       canvasHeight: this.canvasHeight,
     })
 
-    // Plant positions: left 25% of canvas, evenly spaced
-    const leftBound = this.canvasWidth * 0.25
+    // 植物宽度按段数比例分配，占据画面左 35%
+    const plantAreaWidth = this.canvasWidth * 0.35
     const laneY = Math.round(this.canvasHeight * 0.4)
-    const plantCount = PLANTS.length
+    const totalSegments = PLANTS.reduce((s, p) => s + p.segments, 0)
+    const gap = 8 // 植物间距
+    const totalGap = gap * (PLANTS.length - 1)
+    const usableWidth = plantAreaWidth - totalGap
+    const startX = 20
+
     this.plantEntities = []
-    for (let i = 0; i < plantCount; i++) {
-      const x = Math.round((leftBound / (plantCount + 1)) * (i + 1))
-      const entity = new PlantEntity(`plant_${i}`, x - 25, laneY - 30, i)
+    let curX = startX
+    for (let i = 0; i < PLANTS.length; i++) {
+      const w = Math.round((PLANTS[i].segments / totalSegments) * usableWidth)
+      const entity = new PlantEntity(`plant_${i}`, curX, laneY - 30, w, i)
       this.plantEntities.push(entity)
+      curX += w + gap
     }
   }
 
@@ -81,19 +88,29 @@ export class BattleScene implements Scene {
     const plantStates = this.manager.getPlantStates()
     const comboCount = this.manager.comboCount
 
-    const plantLetters = this.manager.getPlantLetters()
+    const chainLetters = this.manager.getChainLetters()
 
+    // 按植物切割链条字母，并计算各植物的已打段数
+    let segOffset = 0
     for (let i = 0; i < this.plantEntities.length; i++) {
       const entity = this.plantEntities[i]
+      const segments = PLANTS[i].segments
+
       if (i < plantStates.length) {
         entity.syncState(plantStates[i])
       }
-      // Highlight plants already activated by the current combo
-      let plantStart = 0
-      for (let j = 0; j < i; j++) plantStart += PLANTS[j].segments
-      entity.highlighted = comboCount > 0 && comboCount > plantStart
-      // Show each plant's letter
-      entity.currentLetter = plantLetters[i] ?? ''
+
+      // 该植物对应的字母片段
+      entity.letters = chainLetters.slice(segOffset, segOffset + segments) as string[]
+
+      // 该植物中已打过的段数
+      const typedInPlant = Math.max(0, Math.min(segments, comboCount - segOffset))
+      entity.typedCount = typedInPlant
+
+      // 当前连击目标是否在这棵植物上
+      entity.isCurrentTarget = comboCount >= segOffset && comboCount < segOffset + segments
+
+      segOffset += segments
     }
   }
 

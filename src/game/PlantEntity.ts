@@ -10,7 +10,7 @@ export class PlantEntity implements Entity {
   readonly id: string
   x: number
   y: number
-  width = 50
+  width: number
   height = 60
   active = true
   layer = RenderLayer.Entity
@@ -18,13 +18,18 @@ export class PlantEntity implements Entity {
 
   private readonly plantIndex: number
   private plantState: PlantState | null = null
-  currentLetter = ''
-  highlighted = false
+  /** 本植物所有段的字母 */
+  letters: string[] = []
+  /** 已打过的段数（0 = 还没开始打这棵） */
+  typedCount = 0
+  /** 是否是当前连击目标植物 */
+  isCurrentTarget = false
 
-  constructor(id: string, x: number, y: number, plantIndex: number) {
+  constructor(id: string, x: number, y: number, width: number, plantIndex: number) {
     this.id = id
     this.x = x
     this.y = y
+    this.width = width
     this.plantIndex = plantIndex
   }
 
@@ -40,40 +45,66 @@ export class PlantEntity implements Entity {
       ? this.plantState.currentHp / this.plantState.config.hp
       : 1
 
+    // 植物色块
     const baseColor = PLANT_COLORS[this.plantIndex % PLANT_COLORS.length]
     ctx.globalAlpha = alive ? 1.0 : 0.3
     ctx.fillStyle = baseColor
     ctx.fillRect(this.x, this.y, this.width, this.height)
 
-    if (this.highlighted && alive) {
-      ctx.strokeStyle = '#ffffff'
+    // 当前目标高亮边框
+    if (this.isCurrentTarget && alive) {
+      ctx.globalAlpha = 1.0
+      ctx.strokeStyle = '#ffd700'
       ctx.lineWidth = 3
       ctx.strokeRect(this.x - 2, this.y - 2, this.width + 4, this.height + 4)
     }
 
+    // 血条（残血时显示）
     if (alive && hpRatio < 1) {
-      const barWidth = this.width
+      ctx.globalAlpha = 1.0
       const barHeight = 4
       const barY = this.y + this.height + 4
       ctx.fillStyle = '#333'
-      ctx.fillRect(this.x, barY, barWidth, barHeight)
+      ctx.fillRect(this.x, barY, this.width, barHeight)
       ctx.fillStyle = '#22cc22'
-      ctx.fillRect(this.x, barY, barWidth * hpRatio, barHeight)
+      ctx.fillRect(this.x, barY, this.width * hpRatio, barHeight)
     }
 
     ctx.globalAlpha = 1.0
 
+    // 植物名称
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 14px sans-serif'
+    ctx.font = 'bold 12px sans-serif'
     ctx.textAlign = 'center'
     const name = this.plantState?.config.name ?? ''
-    ctx.fillText(name.charAt(0), this.x + this.width / 2, this.y + this.height / 2 + 5)
+    ctx.fillText(name, this.x + this.width / 2, this.y + this.height / 2 + 5)
 
-    if (this.currentLetter) {
-      ctx.fillStyle = alive ? '#ffffff' : '#888888'
-      ctx.font = 'bold 28px monospace'
+    // 字母序列显示在植物上方
+    if (this.letters.length > 0) {
+      const fontSize = Math.min(20, Math.max(14, Math.floor(this.width / this.letters.length * 0.8)))
+      ctx.font = `bold ${fontSize}px monospace`
       ctx.textAlign = 'center'
-      ctx.fillText(this.currentLetter.toUpperCase(), this.x + this.width / 2, this.y - 15)
+
+      const totalLetterWidth = this.letters.length * (fontSize * 0.7)
+      const startX = this.x + (this.width - totalLetterWidth) / 2 + fontSize * 0.35
+
+      for (let i = 0; i < this.letters.length; i++) {
+        const lx = startX + i * (fontSize * 0.7)
+        const ly = this.y - 10
+
+        if (i < this.typedCount) {
+          // 已打过：灰色小字
+          ctx.fillStyle = alive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)'
+        } else if (i === this.typedCount && this.isCurrentTarget) {
+          // 当前要打的：金色高亮
+          ctx.fillStyle = '#ffd700'
+        } else {
+          // 还没到的：白色
+          ctx.fillStyle = alive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)'
+        }
+
+        ctx.fillText(this.letters[i].toUpperCase(), lx, ly)
+      }
     }
   }
 }

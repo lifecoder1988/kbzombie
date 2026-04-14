@@ -25,8 +25,6 @@ export interface BattleConfig {
 }
 
 const WAVE_PAUSE_DURATION = 3000
-const PLANT_WIDTH = 50
-const ZOMBIE_CHEW_OFFSET = 50
 
 export class BattleManager {
   private readonly config: BattleConfig
@@ -38,7 +36,8 @@ export class BattleManager {
   private _status: BattleStatus = BattleStatus.Fighting
   private _currentWave = 0
   private _missedCount = 0
-  private _plantLetters: string[]
+  /** 整条链条的字母序列，长度 = totalSegments */
+  private _chainLetters: string[]
 
   // wave spawn tracking
   private spawnedInWave = 0
@@ -56,8 +55,9 @@ export class BattleManager {
   private projectileIdCounter = 0
   private _pendingProjectiles = 0
 
-  // plant x positions
+  // plant layout
   private readonly plantPositions: readonly number[]
+  private readonly plantWidths: readonly number[]
   private readonly laneY: number
 
   constructor(config: BattleConfig) {
@@ -66,16 +66,27 @@ export class BattleManager {
     this.plantChain = new PlantChain(config.plants)
     this.combo = new ComboSystem(config.plants.map(p => p.segments))
     this.letters = new LetterProvider(config.letterPool, config.letterSeed)
-    this._plantLetters = config.plants.map(() => this.letters.next())
+    const totalSeg = config.plants.reduce((s, p) => s + p.segments, 0)
+    this._chainLetters = Array.from({ length: totalSeg }, () => this.letters.next())
 
-    // Plant positions spread across left 25% of canvas
-    const leftBound = config.canvasWidth * 0.25
+    // 植物位置按段数比例分配，占画面左 35%
+    const plantAreaWidth = config.canvasWidth * 0.35
+    const totalSeg2 = config.plants.reduce((s, p) => s + p.segments, 0)
+    const gap = 8
+    const totalGap = gap * (config.plants.length - 1)
+    const usableWidth = plantAreaWidth - totalGap
+    const startX = 20
     const positions: number[] = []
-    const plantCount = config.plants.length
-    for (let i = 0; i < plantCount; i++) {
-      positions.push(Math.round((leftBound / (plantCount + 1)) * (i + 1)))
+    const widths: number[] = []
+    let curX = startX
+    for (let i = 0; i < config.plants.length; i++) {
+      const w = Math.round((config.plants[i].segments / totalSeg2) * usableWidth)
+      positions.push(curX)
+      widths.push(w)
+      curX += w + gap
     }
     this.plantPositions = positions
+    this.plantWidths = widths
     this.laneY = Math.round(config.canvasHeight * 0.4)
   }
 
@@ -83,25 +94,19 @@ export class BattleManager {
   get currentWave(): number { return this._currentWave }
   get comboCount(): number { return this.combo.current }
   get missedCount(): number { return this._missedCount }
+  /** 当前需要输入的字母（链条中 combo 位置的字母） */
   get currentLetter(): string {
-    const plantIdx = this.getCurrentPlantIndex()
-    return this._plantLetters[plantIdx]
+    return this._chainLetters[this.combo.current] ?? this._chainLetters[0]
   }
 
-  /** 每棵植物当前显示的字母 */
-  getPlantLetters(): readonly string[] {
-    return this._plantLetters
-  }
-
-  private getCurrentPlantIndex(): number {
-    const combo = this.combo.current
-    if (combo === 0) return 0
-    return this.plantChain.getPlantIndexAtCombo(combo + 1)
+  /** 获取整条链条的字母序列 */
+  getChainLetters(): readonly string[] {
+    return this._chainLetters
   }
 
   private regenerateAllLetters(): void {
-    for (let i = 0; i < this._plantLetters.length; i++) {
-      this._plantLetters[i] = this.letters.next()
+    for (let i = 0; i < this._chainLetters.length; i++) {
+      this._chainLetters[i] = this.letters.next()
     }
   }
 
@@ -192,7 +197,7 @@ export class BattleManager {
   private assignChewTarget(zombie: ZombieEntity): void {
     const plantIdx = this.plantChain.getRightmostAlivePlantIndex()
     if (plantIdx >= 0) {
-      zombie.setChewTarget(this.plantPositions[plantIdx] + ZOMBIE_CHEW_OFFSET)
+      zombie.setChewTarget(this.plantPositions[plantIdx] + this.plantWidths[plantIdx])
     }
   }
 
@@ -222,7 +227,7 @@ export class BattleManager {
       const z = zombies[i]
       if (z.state === ZombieState.Dead) continue
       if (plantIdx >= 0) {
-        z.setChewTarget(this.plantPositions[plantIdx] + ZOMBIE_CHEW_OFFSET)
+        z.setChewTarget(this.plantPositions[plantIdx] + this.plantWidths[plantIdx])
       } else {
         z.clearChewTarget()
       }
@@ -312,9 +317,8 @@ export class BattleManager {
       this.executeSettlement(settlement.comboCount, settlement.isFullChain)
       this.regenerateAllLetters()
     } else if (action === InputAction.LetterHit) {
-      // Regenerate the current target plant's letter for the next input
-      const idx = this.getCurrentPlantIndex()
-      this._plantLetters[idx] = this.letters.next()
+      // combo already advanced — the old position letter was consumed, no need to regenerate
+      // (it will show as "already typed" visually)
     }
   }
 
@@ -327,8 +331,8 @@ export class BattleManager {
       ? result.totalPower / result.aliveActivatedIndices.length
       : 0
     for (const plantIdx of result.aliveActivatedIndices) {
-      const px = this.plantPositions[plantIdx]
-      const py = this.laneY + PLANT_WIDTH / 2
+      const px = this.plantPositions[plantIdx] + this.plantWidths[plantIdx]
+      const py = this.laneY + 30
       const id = `proj_${this.projectileIdCounter++}`
       const proj = new ProjectileEntity(id, px, py, this.config.projectileSpeed, powerPerProjectile, this.config.canvasWidth)
       this.entityManager.add(proj)
