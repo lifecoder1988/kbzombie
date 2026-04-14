@@ -196,6 +196,9 @@ export class BattleManager {
     // Handle chewing
     this.updateChewing(dt)
 
+    // Re-acquire tracking targets each frame
+    this.updateTrackingTargets()
+
     // Collision: projectiles vs zombies
     this.updateCollisions()
 
@@ -281,6 +284,16 @@ export class BattleManager {
       } else {
         z.clearChewTarget()
       }
+    }
+  }
+
+  private updateTrackingTargets(): void {
+    const projectiles = this.entityManager.getByTag('projectile') as ProjectileEntity[]
+    for (let i = 0; i < projectiles.length; i++) {
+      const proj = projectiles[i]
+      if (!proj.active || proj.flight !== 'tracking') continue
+      const nearest = this.findNearestZombie(proj.x, proj.y)
+      proj.setTarget(nearest ?? null)
     }
   }
 

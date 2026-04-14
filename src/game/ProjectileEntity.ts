@@ -61,8 +61,8 @@ export class ProjectileEntity implements Entity {
   // Current heading for movement
   private heading: number
 
-  // Tracking: target reference
-  private readonly target: { x: number; y: number; active?: boolean } | null
+  // Tracking: target reference (updated by BattleManager each frame)
+  private target: { x: number; y: number; active?: boolean } | null
   private readonly maxTurnRate: number
 
   // Chain: bounce state
@@ -138,6 +138,10 @@ export class ProjectileEntity implements Entity {
         this.active = false
         break
     }
+  }
+
+  setTarget(target: { x: number; y: number; active?: boolean } | null): void {
+    this.target = target
   }
 
   redirectTo(targetX: number, targetY: number): void {
