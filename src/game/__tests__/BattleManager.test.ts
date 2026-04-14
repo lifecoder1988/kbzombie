@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { BattleManager } from '../BattleManager'
+import { BattleManager, type BattleConfig } from '../BattleManager'
 import { BattleStatus, ZombieState } from '../types'
 import type { WaveConfig, PlantConfig } from '../types'
 
 const TEST_PLANTS: PlantConfig[] = [
-  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100 },
-  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80 },
+  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', trajectory: 'direct' },
+  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', trajectory: 'direct' },
 ]
 
 const TEST_WAVES: WaveConfig[] = [
@@ -15,7 +15,7 @@ const TEST_WAVES: WaveConfig[] = [
 const TEST_ZOMBIE = { hp: 50, speed: 30, chewDps: 10 }
 const TEST_LETTERS = ['f', 'j', 'd', 'k']
 
-function createManager() {
+function createManager(overrides?: Partial<BattleConfig>) {
   return new BattleManager({
     plants: TEST_PLANTS,
     waves: TEST_WAVES,
@@ -28,6 +28,12 @@ function createManager() {
     canvasWidth: 1000,
     canvasHeight: 600,
     letterSeed: 42,
+    synergyMultiplier: { 1: 1.0, 2: 1.2, 3: 1.5 },
+    areaBulletCount: 5,
+    areaSpreadAngle: Math.PI / 3,
+    areaDamageDecay: 0.8,
+    trackingTurnRate: Math.PI,
+    ...overrides,
   })
 }
 
@@ -119,6 +125,11 @@ describe('BattleManager', () => {
       canvasWidth: 1000,
       canvasHeight: 600,
       letterSeed: 42,
+      synergyMultiplier: { 1: 1.0, 2: 1.2, 3: 1.5 },
+      areaBulletCount: 5,
+      areaSpreadAngle: Math.PI / 3,
+      areaDamageDecay: 0.8,
+      trackingTurnRate: Math.PI,
     })
 
     for (let i = 0; i < 100; i++) {
@@ -137,5 +148,62 @@ describe('BattleManager', () => {
     for (let i = 0; i < statesAfterWave1.length; i++) {
       expect(statesWave2[i]).toBeLessThanOrEqual(statesAfterWave1[i])
     }
+  })
+
+  it('协同倍率从 config 注入生效', () => {
+    const mgr = createManager()
+    mgr.update(1100)
+    // 打满两棵植物（4+4=8段）自动触发结算
+    for (let i = 0; i < 8; i++) {
+      mgr.onKeyDown(mgr.currentLetter)
+    }
+    // 2棵植物 → 2 颗弹道
+    expect(mgr.projectileCount).toBe(2)
+  })
+
+  it('area 弹道创建 areaBulletCount 颗子弹（奇数）', () => {
+    const areaPlants: PlantConfig[] = [
+      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', trajectory: 'area' },
+    ]
+    const mgr = createManager({ plants: areaPlants, areaBulletCount: 3 })
+    mgr.update(1100)
+    for (let i = 0; i < 4; i++) {
+      mgr.onKeyDown(mgr.currentLetter)
+    }
+    expect(mgr.projectileCount).toBe(3)
+  })
+
+  it('area 弹道偶数颗子弹也能正确创建', () => {
+    const areaPlants: PlantConfig[] = [
+      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', trajectory: 'area' },
+    ]
+    const mgr = createManager({ plants: areaPlants, areaBulletCount: 4 })
+    mgr.update(1100)
+    for (let i = 0; i < 4; i++) {
+      mgr.onKeyDown(mgr.currentLetter)
+    }
+    expect(mgr.projectileCount).toBe(4)
+  })
+
+  it('pierce 弹道命中后继续飞行可命中下一只僵尸', () => {
+    // Use high-HP zombies so they survive the hit, allowing us to verify multiple hits
+    const highHpZombie = { hp: 200, speed: 30, chewDps: 10 }
+    const piercePlants: PlantConfig[] = [
+      { id: 'pierce_plant', name: '穿透', comboSegment: 4, attackPower: 50, hp: 100, element: 'normal', trajectory: 'pierce' },
+    ]
+    const waves: WaveConfig[] = [{ zombieType: 'tank', count: 3, interval: 200 }]
+    const mgr = createManager({ plants: piercePlants, waves, zombieConfigs: { tank: highHpZombie } })
+    mgr.update(800)
+    expect(mgr.zombieCount).toBe(3)
+    for (let i = 0; i < 4; i++) {
+      mgr.onKeyDown(mgr.currentLetter)
+    }
+    expect(mgr.projectileCount).toBeGreaterThan(0)
+    // Let projectile fly and hit zombies (small dt to avoid tunneling)
+    for (let i = 0; i < 200; i++) mgr.update(16)
+    // All 3 zombies at same position should have been hit by pierce projectile
+    const zombies = mgr.getZombies()
+    const damagedCount = zombies.filter(z => z.currentHp < 200).length
+    expect(damagedCount).toBeGreaterThanOrEqual(2)
   })
 })

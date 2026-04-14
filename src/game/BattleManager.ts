@@ -1,7 +1,7 @@
 import { EntityManager } from '../engine/EntityManager'
 import { intersects } from '../engine/CollisionDetection'
 import { BattleStatus } from './types'
-import type { PlantConfig, PlantState, WaveConfig, ZombieConfig } from './types'
+import type { PlantConfig, PlantState, WaveConfig, ZombieConfig, Element, Trajectory } from './types'
 import { PlantChain } from './PlantChain'
 import { ComboSystem } from './ComboSystem'
 import { LetterProvider } from './LetterProvider'
@@ -23,6 +23,11 @@ export interface BattleConfig {
   readonly canvasWidth: number
   readonly canvasHeight: number
   readonly letterSeed?: number
+  readonly synergyMultiplier: Readonly<Record<number, number>>
+  readonly areaBulletCount: number
+  readonly areaSpreadAngle: number
+  readonly areaDamageDecay: number
+  readonly trackingTurnRate: number
 }
 
 export class BattleManager {
@@ -249,14 +254,15 @@ export class BattleManager {
       for (let zi = 0; zi < zombies.length; zi++) {
         const z = zombies[zi]
         if (!z.active) continue
+        if (proj.hasHit(z.id)) continue
 
         if (intersects(proj, z)) {
           z.takeDamage(proj.power)
-          proj.onHit()
+          proj.onHit(z.id)
           if (!z.active) {
             this.processedInWave++
           }
-          break
+          if (proj.trajectory !== 'pierce') break
         }
       }
     }
@@ -327,34 +333,97 @@ export class BattleManager {
 
   private executeSettlement(comboCount: number, isFullChain: boolean): void {
     const plants = this.plantChain.getStates()
-    const result = calculateSettlement(plants, comboCount, isFullChain)
+    const result = calculateSettlement(plants, comboCount, isFullChain, this.config.synergyMultiplier)
 
-    // Fire projectiles from each alive activated plant, splitting total power evenly
-    const powerPerProjectile = result.aliveActivatedIndices.length > 0
-      ? result.totalPower / result.aliveActivatedIndices.length
-      : 0
-    for (const plantIdx of result.aliveActivatedIndices) {
+    const { synthesizedEffect, perPlantPower, aliveActivatedIndices } = result
+
+    for (let i = 0; i < aliveActivatedIndices.length; i++) {
+      const plantIdx = aliveActivatedIndices[i]
       const px = this.plantPositions[plantIdx] + this.plantWidths[plantIdx] / 2
       const py = this.laneY + 30
+      const power = perPlantPower[i]
+
+      if (synthesizedEffect.trajectory === 'area') {
+        this.fireAreaProjectiles(px, py, power, synthesizedEffect.element)
+      } else {
+        const id = `proj_${this.projectileIdCounter++}`
+        const proj = new ProjectileEntity({
+          id,
+          x: px,
+          y: py,
+          speed: this.config.projectileSpeed,
+          power,
+          rightBound: this.config.canvasWidth,
+          trajectory: synthesizedEffect.trajectory,
+          element: synthesizedEffect.element,
+          target: synthesizedEffect.trajectory === 'tracking' ? this.findNearestZombie(px, py) : undefined,
+          maxTurnRate: this.config.trackingTurnRate,
+        })
+        this.entityManager.add(proj)
+        this._pendingProjectiles++
+      }
+    }
+
+    if (isFullChain) {
+      this.plantChain.healOnFullChain(this.config.healAmount)
+      this.reassignAllChewTargets()
+    }
+  }
+
+  private fireAreaProjectiles(px: number, py: number, power: number, element: Element): void {
+    const count = this.config.areaBulletCount
+    const halfSpread = this.config.areaSpreadAngle / 2
+    const decay = this.config.areaDamageDecay
+    const bulletPower = power * decay
+
+    // Build angle list: 0 always included, symmetric pairs outward
+    const angles: number[] = [0]
+    const pairs = Math.floor((count - 1) / 2)
+    if (pairs > 0) {
+      const step = halfSpread / pairs
+      for (let j = 1; j <= pairs; j++) {
+        angles.push(step * j)
+        angles.push(-step * j)
+      }
+    }
+    // Even count: one extra bullet between center and first pair
+    if (count > 1 && count % 2 === 0) {
+      const step = pairs > 0 ? halfSpread / pairs : halfSpread
+      angles.push(step / 2)
+    }
+
+    for (let i = 0; i < angles.length; i++) {
       const id = `proj_${this.projectileIdCounter++}`
       const proj = new ProjectileEntity({
         id,
         x: px,
         y: py,
         speed: this.config.projectileSpeed,
-        power: powerPerProjectile,
+        power: bulletPower,
         rightBound: this.config.canvasWidth,
-        trajectory: 'direct',
-        element: 'normal',
+        trajectory: 'area',
+        element,
+        angle: angles[i],
       })
       this.entityManager.add(proj)
       this._pendingProjectiles++
     }
+  }
 
-    // Heal on full chain, then reassign zombie targets (revived plants need to be chewed again)
-    if (isFullChain) {
-      this.plantChain.healOnFullChain(this.config.healAmount)
-      this.reassignAllChewTargets()
+  private findNearestZombie(px: number, py: number): { x: number; y: number; active?: boolean } | undefined {
+    const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
+    let nearest: ZombieEntity | undefined
+    let minDist = Infinity
+    for (const z of zombies) {
+      if (!z.active) continue
+      const dx = z.x - px
+      const dy = z.y - py
+      const dist = dx * dx + dy * dy
+      if (dist < minDist) {
+        minDist = dist
+        nearest = z
+      }
     }
+    return nearest
   }
 }

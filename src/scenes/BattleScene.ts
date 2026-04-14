@@ -50,6 +50,8 @@ export class BattleScene implements Scene {
         comboSegment: def.comboSegment,
         attackPower: def.attackPower,
         hp: def.hp,
+        element: def.element,
+        trajectory: def.trajectory,
       }
     })
 
@@ -74,6 +76,11 @@ export class BattleScene implements Scene {
       wavePauseDuration: BATTLE_PARAMS.wavePauseDuration,
       canvasWidth: this.canvasWidth,
       canvasHeight: this.canvasHeight,
+      synergyMultiplier: SYNERGY_PARAMS.multiplier,
+      areaBulletCount: BATTLE_PARAMS.areaBulletCount,
+      areaSpreadAngle: BATTLE_PARAMS.areaSpreadAngle,
+      areaDamageDecay: BATTLE_PARAMS.areaDamageDecay,
+      trackingTurnRate: BATTLE_PARAMS.trackingTurnRate,
     })
 
     // Plant entity layout (layout ratios stay in code, not config)
