@@ -278,12 +278,16 @@
 
 ### 3.6 结算攻击目标
 
-- **直射**：命中当前路最前面的僵尸，不跨路
-- **穿透**：命中当前路直线上所有僵尸，不跨路
-- **辐射**：扇形散射带角度，子弹可飞入邻路命中邻路僵尸
-- **追踪**：锁定全局最近的僵尸，不限路
-- 碰撞检测保持全局，由弹道物理自然决定命中范围
-- 攻击类型由特效系统自动合成（见 4.4 特效系统）
+弹道的命中范围由 Flight 和 Impact 维度共同决定：
+
+- **straight + vanish**：水平直线，命中当前路最前面的僵尸，不跨路
+- **straight + pierce**：水平直线穿透，命中当前路直线上所有僵尸
+- **straight + chain**：命中后弹向附近僵尸，可跨路
+- **straight + explode**：命中后落点范围爆炸，可波及邻路
+- **tracking + 任意 Impact**：追踪弹锁定全局最近僵尸，可跨路
+- **fan（扇形散射）**：子弹可飞入邻路，可跨路
+
+碰撞检测保持全局，由弹道物理自然决定命中范围。攻击类型由四维特效合成系统自动合成（见 4.4 特效系统）。
 
 ---
 
@@ -299,8 +303,10 @@
   name: string             // 显示名称
   comboSegment: number     // 占据的连击段数（4、8、16...）
   attackPower: number      // 基础攻击力
-  element: string          // 元素特效（normal / ice / fire）
-  trajectory: string       // 弹道特效（direct / pierce / area / tracking）
+  element: Element         // 元素效果（normal / ice / fire / electric / stun / knockback）
+  spread: Spread           // 发射模式（single / burst / fan）
+  flight: Flight           // 飞行路径（straight / tracking）
+  impact: Impact           // 命中行为（vanish / chain / pierce / explode）
   hp: number               // 血量上限
   chainPosition: number    // 链条中的位置（从左到右）
   unlockStage: number      // 在哪个指法阶段解锁
@@ -309,14 +315,25 @@
 
 ### 4.2 初版植物设计
 
-| 植物 | 链条位置 | 连击段数 | 元素 | 弹道 | 攻击特点 | 解锁阶段 |
-|------|----------|----------|------|------|----------|----------|
-| 豌豆射手 | 第 1 位 | 4 | 普通 | 直射 | 基础伤害，无特效 | 第 1 阶段（默认） |
-| 寒冰射手 | 第 2 位 | 4 | 冰冻 | 直射 | 附带减速 | 第 2 阶段 |
-| 双发射手 | 第 3 位 | 4 | 普通 | 直射 | 纯高攻击力 | 第 3 阶段 |
-| 火炬树桩 | 第 4 位 | 8 | 火焰 | 直射 | 附带灼烧 | 第 4 阶段 |
-| 大喷菇 | 第 5 位 | 16 | 普通 | 辐射 | 范围攻击 | 第 5 阶段 |
-| 猫尾草 | 第 6 位 | 待定 | 普通 | 追踪 | 锁定离植物最近的僵尸 | 第 6 阶段 |
+| # | 植物 | 段数 | 元素 | 发射 | 飞行 | 命中 | 特色定位 | 解锁阶段 |
+|---|------|------|------|------|------|------|----------|---------|
+| 1 | 豌豆射手 | 4 | normal | single | straight | vanish | 基础款，零门槛 | 1 |
+| 2 | 寒冰射手 | 4 | ice | single | straight | vanish | 入门元素：减速 | 2 |
+| 3 | 双发射手 | 4 | normal | burst | straight | vanish | 入门发射：连发 | 3 |
+| 4 | 火炬树桩 | 8 | fire | single | straight | vanish | 冰火互斥策略入门 | 4 |
+| 5 | 仙人掌 | 4 | normal | single | straight | pierce | 入门命中：穿透 | 5 |
+| 6 | 闪电芦苇 | 4 | electric | single | straight | vanish | 入门电击：僵尸扎堆时强 | 6 |
+| 7 | 玉米投手 | 8 | stun | single | straight | explode | 眩晕+落点爆炸，控制型 | 7 |
+| 8 | 大喷菇 | 16 | normal | fan | straight | vanish | 高段数高回报：扇形散射 | 8 |
+| 9 | 猫尾草 | 8 | normal | single | tracking | chain | 跨路追踪+弹跳 | 9 |
+| 10 | 飓风花 | 8 | knockback | single | straight | vanish | 击退争取时间 | 10 |
+| 11 | 西瓜投手 | 12 | normal | single | straight | explode | 高段数：大范围爆炸 | 11 |
+| 12 | 星星果 | 12 | electric | fan | tracking | vanish | 终极多维：电击+扇形+追踪 | 12 |
+
+**设计节奏**：
+- **阶段 1-6（4 段为主）**：每棵植物只在 1 个维度非默认，逐步教会孩子每个维度的含义
+- **阶段 7-9（8 段）**：出现单棵多维度升级的植物（玉米投手 stun+explode、猫尾草 tracking+chain）
+- **阶段 10-12（8-12 段）**：高投入高回报，星星果贡献 3 个维度
 
 > 段数和属性均为初版建议值，由策略配置决定，可随时调整。
 
@@ -363,71 +380,105 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 
 #### 特效分类
 
-特效分为**两个正交维度**，不同维度之间自由叠加，同维度内互斥取优：
+特效分为**四个正交维度**，不同维度之间自由叠加，同维度内互斥取优：
 
 | 维度 | 说明 | 可选值 |
 |------|------|--------|
-| **元素**（影响伤害属性/附加效果） | 同维度互斥，取优先级最高的 | 普通(normal)、冰冻(ice)、火焰(fire) |
-| **弹道**（影响命中范围/轨迹） | 同维度互斥，取优先级最高的 | 直射(direct)、穿透(pierce)、辐射(area)、追踪(tracking) |
+| **元素 Element**（命中后给僵尸施加的状态） | 冰+火互斥抵消，其余取优先级最高 | normal / ice / fire / electric / stun / knockback |
+| **发射模式 Spread**（弹道发射形态） | 取优先级最高 | single / burst / fan |
+| **飞行路径 Flight**（弹道飞行方式） | 取优先级最高 | straight / tracking |
+| **命中行为 Impact**（弹道命中后处理） | 取优先级最高 | vanish / chain / pierce / explode |
 
-> 两个维度未来可独立扩展，新增维度不影响已有维度的逻辑。
+四个维度完全正交，组合空间 6×3×2×4 = 144 种理论形态。加新植物 = 加特效标签，自动参与协同，不需要配置具体组合。
 
 #### 同维度优先级
 
 **元素优先级**（从低到高）：
 
 ```
-普通(normal) < 冰冻(ice) = 火焰(fire)
+普通(normal) < 冰冻(ice) = 火焰(fire) < 电击(electric) < 眩晕(stun) < 击退(knockback)
 ```
 
-特殊规则：冰冻 + 火焰同时存在 → **互相抵消，回退为普通**。
+特殊规则：冰冻 + 火焰同时存在 → **互相抵消**，移除冰和火后取剩余最高优先级；若无剩余则回退为 normal。
 
-**弹道优先级**（从低到高）：
+**发射模式优先级**（从低到高）：
 
 ```
-直射(direct) < 追踪(tracking) < 穿透(pierce) < 辐射(area)
+单发(single) < 连发(burst) < 扇形散射(fan)
 ```
 
-#### 元素附加效果
+**飞行路径优先级**（从低到高）：
 
-| 元素 | 附加效果 | 数值 |
-|------|----------|------|
-| 普通 | 无 | — |
-| 冰冻 | 命中后减速（降低移动速度和啃食速度） | 减速比例、持续时间待定 |
-| 火焰 | 命中后灼烧（持续伤害） | 灼烧 DPS、持续时间待定 |
+```
+直线(straight) < 追踪(tracking)
+```
 
-> 附加效果的具体数值待平衡调整时确定。框架先搭好，代码预留接口。
+**命中行为优先级**（从低到高）：
 
-#### 弹道类型与行为
+```
+消失(vanish) < 连锁跳跃(chain) < 穿透(pierce) < 落点爆炸(explode)
+```
+
+#### 元素效果详细行为
+
+| 元素 | 命中后行为 | 关键参数 |
+|------|-----------|---------|
+| normal | 纯伤害，无附加 | — |
+| ice | 减速（移动和啃食速度降低） | slowRatio（减速比例）、slowDuration（持续秒数） |
+| fire | 灼烧（持续伤害） | burnDps（每秒伤害）、burnDuration（持续秒数） |
+| electric | 电击（沿僵尸连通性传导伤害） | conductRadius（导电距离）、conductDamageDecay（每跳衰减比例）、conductMaxJumps（最大传导次数） |
+| stun | 眩晕（完全停止移动和啃食） | stunDuration（持续秒数） |
+| knockback | 击退（向右推回一段距离） | knockbackDistance（推回距离） |
+
+**电击传导机制**：命中僵尸 A 后，从 A 开始检查周围 conductRadius 内的僵尸 B，B 受到弹道伤害 × conductDamageDecay 的伤害；B 周围再查 C，伤害继续衰减；最多传导 conductMaxJumps 次，每只僵尸只被传导一次（防环路）。传导是瞬时的，不创建新弹道实体。
+
+**击退**是一次性位移，不是持续状态。其他状态效果（slow/burn/stun）同种不叠加、刷新持续时间，不同种可共存。
+
+> 附加效果的具体数值待平衡调整时确定。
+
+#### 弹道生命周期
 
 弹道是**真实的游戏实体**，有位置、速度、碰撞体积，由引擎的实体系统管理生命周期，每帧参与 update/render 循环。
 
-**直射弹道**：
-- 从植物位置水平直线飞向右侧
-- 碰到第一只僵尸 → 命中，弹道消失
-- 飞出屏幕右边界 → 弹道消失（未命中）
+弹道生命周期分三个阶段，由 Spread / Flight / Impact 三个维度分别控制：
 
-**追踪弹道**：
-- 发射时锁定目标（离植物最近的僵尸，可跨路）
-- 每帧调整飞行方向朝向目标当前位置（僵尸在移动，弹道轨迹是曲线）
-- 有最大转向速率（`trackingTurnRate`，默认 π 弧度/秒），不能瞬间转弯，形成弧线
-- 碰到目标僵尸 → 命中，弹道消失
-- 目标在飞行途中死亡 → 弹道沿最后方向继续飞行，可碰撞途中其他僵尸；飞出屏幕则消失
+```
+发射阶段（Spread 决定）→ 飞行阶段（Flight 决定）→ 命中阶段（Impact + Element 决定）
+```
 
-**穿透弹道**：
-- 从植物位置水平直线飞向右侧（同直射）
-- 碰到僵尸 → 命中，**弹道不消失，继续飞行**
-- 可命中直线上所有僵尸（本路），直到飞出屏幕
-- 每只僵尸只被同一发穿透弹命中一次
+#### 发射阶段（Spread 决定）
 
-**辐射弹道**：
-- 从植物位置向前方**扇形散射发射多颗子弹**（数量由 `areaBulletCount` 配置，默认 5）
-- 扇形总角度由 `areaSpreadAngle` 配置（默认 π/3 即 60°），正前方（0°）**始终有一颗子弹**
-- 每颗子弹独立飞行，有各自的方向和碰撞
-- 每颗子弹的伤害 = 该植物伤害 × `areaDamageDecay`（衰减系数，默认 1.0 即无衰减）
-- 子弹之间有角度间隔，范围内的僵尸**不一定全部命中**（有空隙）
-- 每颗子弹碰到僵尸 → 命中该僵尸，子弹消失
-- 子弹数量越多、扇形越密，覆盖越好，但不保证无遗漏
+| Spread | 创建逻辑 |
+|--------|---------|
+| single | 每棵植物发射 1 颗弹道，正前方 |
+| burst | 每棵植物快速连发 N 颗（`burstCount`），同方向，按 `burstInterval` 间隔依次发射 |
+| fan | 每棵植物扇形散射 N 颗（`fanBulletCount`），同时发射，均匀分布在 `fanSpreadAngle` 角度内，正前方必有一颗 |
+
+burst 和 fan 创建的每颗子弹都是独立弹道实体，各自进入飞行和命中阶段。
+
+#### 飞行阶段（Flight 决定）
+
+| Flight | update 逻辑 |
+|--------|------------|
+| straight | 沿初始方向匀速直线飞行，飞出屏幕则消失 |
+| tracking | 每帧调整飞行方向朝向目标（受 `trackingTurnRate` 限制），目标死亡后沿最后方向继续飞行 |
+
+与 Spread 的组合自然生效：
+- fan + tracking = 扇形射出的每颗子弹各自追踪最近目标
+- burst + tracking = 连发的每颗子弹各自追踪（前一颗命中后可能追不同目标）
+
+#### 命中阶段（Impact + Element 决定）
+
+碰撞检测命中僵尸后：
+
+| Impact | 命中后行为 |
+|--------|-----------|
+| vanish | 弹道消失 |
+| chain | 在 `chainRange` 内找下一只未命中的僵尸，改变方向飞向它，弹跳次数 +1，达到 `chainBounces` 则消失 |
+| pierce | 记录已命中僵尸（hitSet），弹道继续飞行，遇到新僵尸继续命中，每只僵尸只命中一次 |
+| explode | 弹道消失，落点 `explodeRadius` 范围内所有僵尸受到 damage × `explodeDamageRatio` 伤害 |
+
+**每次命中（包括 chain/pierce 的多次命中）都触发 Element 效果。**
 
 #### 碰撞判定
 
@@ -436,28 +487,18 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 - 命中后对该僵尸独立计算伤害，超杀不溢出
 - 同一只僵尸可被多发弹道命中（来自不同次结算的弹道）
 
-#### 弹道命中规则汇总
-
-| 弹道 | 飞行方式 | 命中后 | 范围 | 关键特征 |
-|------|----------|--------|------|----------|
-| 直射 | 水平直线 | 消失 | 本路 | 命中第一只 |
-| 追踪 | 曲线追踪目标 | 消失 | **跨路** | 每帧调整方向，目标死亡后沿惯性飞行 |
-| 穿透 | 水平直线 | 继续飞行 | 本路 | 穿过所有僵尸 |
-| 辐射 | 扇形散射多颗 | 每颗独立消失 | **可跨路** | 扇形带角度，子弹可飞入邻路 |
-
 #### 特效合成示例
 
-| 激活植物 | 元素层 | 弹道层 | 最终攻击 |
-|----------|--------|--------|----------|
-| 豌豆 | 普通 | 直射 | 普通直射（基础攻击） |
-| 寒冰 + 大喷菇 | 冰冻 | 辐射 > 直射 | **冰冻范围攻击** |
-| 火炬 + 大喷菇 | 火焰 | 辐射 > 直射 | **火焰范围攻击** |
-| 火炬 + 猫尾草 | 火焰 | 追踪 > 直射 | **火焰追踪弹** |
-| 寒冰 + 火炬 | 冰火抵消→普通 | 直射 | **普通直射**（元素浪费） |
-| 寒冰 + 火炬 + 大喷菇 | 冰火抵消→普通 | 辐射 | **普通范围攻击** |
-| 火炬 + 大喷菇 + 猫尾草 | 火焰 | 辐射 > 追踪 > 直射 | **火焰范围攻击** |
-
-> 加新植物 = 加一个特效标签，自动参与协同，不需要配置具体组合。
+| 激活植物 | 元素 | 发射 | 飞行 | 命中 | 最终形态 |
+|---------|------|------|------|------|---------|
+| 豌豆 | normal | single | straight | vanish | 普通单发直射（基础攻击） |
+| 寒冰 + 大喷菇 | ice | fan | straight | vanish | **冰冻扇形散射** |
+| 火炬 + 猫尾草 | fire | single | tracking | chain | **火焰追踪连锁弹** |
+| 寒冰 + 火炬 + 闪电芦苇 | 冰火抵消→electric | single | straight | vanish | **电击弹** |
+| 寒冰 + 火炬 | 冰火抵消→normal | single | straight | vanish | **普通弹**（元素浪费） |
+| 仙人掌 + 猫尾草 | normal | single | tracking | pierce>chain | **追踪穿透弹** |
+| 玉米投手 + 大喷菇 + 猫尾草 | stun | fan | tracking | explode>chain | **眩晕追踪扇形爆炸** |
+| 闪电芦苇 + 仙人掌 + 大喷菇 | electric | fan | straight | pierce | **电击扇形穿透弹** |
 
 ### 4.5 协同攻击系统
 
@@ -480,17 +521,20 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 
 > 倍率公式待平衡调整时确定。可以是固定查表，也可以是连续公式。
 
-**第二层：特效合成** — 收集所有已激活存活植物的特效标签，按 4.4 节的分类规则合成最终攻击类型：
+**第二层：特效合成** — 收集所有已激活存活植物的四维特效标签，按 4.4 节的分类规则合成最终攻击类型：
 
-1. 元素维度：取优先级最高的元素（冰+火抵消）
-2. 弹道维度：取优先级最高的弹道
-3. 两个维度的结果组合 = 最终攻击形态
+1. 元素维度：取优先级最高的元素（冰+火互相抵消后取剩余最高）
+2. 发射维度：取优先级最高的发射模式
+3. 飞行维度：取优先级最高的飞行路径
+4. 命中维度：取优先级最高的命中行为
+5. 四个维度的结果组合 = 最终攻击形态
 
 #### 设计优势
 
-- **无需穷举组合**：新增植物自带特效标签，自动参与协同
-- **规则可预测**：孩子打到一定阶段可以理解"冰+范围=冰冻范围攻击"
-- **策略深度**：冰火抵消让植物排列/激活顺序有策略意义
+- **无需穷举组合**：新增植物自带四维特效标签，自动参与协同
+- **规则可预测**：孩子打到一定阶段可以理解"冰+扇形=冰冻扇形散射"
+- **策略深度**：冰火抵消让植物选择有策略意义；四维正交让组合空间丰富（144 种理论形态）
+- **维度独立**：追踪+穿透、扇形+爆炸等有趣组合成为可能
 
 ### 4.6 结算攻击的完整计算流程
 
@@ -504,23 +548,23 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 3. 计算每棵植物的独立伤害：每棵已激活存活植物的伤害 = 该植物 attackPower × 协同倍率
    （不同植物攻击力不同，各自携带独立伤害，不做总量平分）
   ↓
-4. 合成特效：收集所有已激活存活植物的特效标签
-   → 元素维度：取最高优先级（冰+火抵消）
-   → 弹道维度：取最高优先级
-   → 组合得到最终攻击类型
+4. 合成特效：收集所有已激活存活植物的四维特效标签
+   → 元素维度：冰+火互相抵消后取剩余最高优先级
+   → 发射维度：取最高优先级（single < burst < fan）
+   → 飞行维度：取最高优先级（straight < tracking）
+   → 命中维度：取最高优先级（vanish < chain < pierce < explode）
+   → 四维组合得到最终攻击形态
   ↓
 5. 发射弹道：每棵已激活植物各自发射独立弹道（各自的射击动画）
-   每颗弹道携带该植物的独立伤害，统一使用合成后的攻击类型飞向目标
+   发射模式由 Spread 维度决定（single/burst/fan）
+   每颗弹道携带该植物的独立伤害，统一使用合成后的攻击形态
    （弹道飞行期间玩家可继续打字，僵尸继续移动和啃食）
   ↓
-6. 命中判定：弹道到达后，根据弹道类型确定命中哪些僵尸
-   - 直射：命中当前路最前方 1 只（不跨路）
-   - 追踪：命中离植物最近的 1 只（可跨路）
-   - 穿透：命中弹道直线上所有僵尸（不跨路）
-   - 辐射：扇形散射，子弹可飞入邻路（可跨路）
+6. 飞行与命中：弹道按 Flight 维度飞行（straight 直线 / tracking 追踪）
+   碰到僵尸后按 Impact 维度处理（vanish 消失 / chain 弹跳 / pierce 穿透 / explode 爆炸）
   ↓
 7. 伤害结算：对每只命中的僵尸独立计算伤害，超杀伤害不溢出到其他僵尸
-   → 同时应用元素附加效果（冰冻减速 / 火焰灼烧）
+   → 同时应用元素效果（ice 减速 / fire 灼烧 / electric 传导 / stun 眩晕 / knockback 击退）
   ↓
 8. 如果是打满链条：额外触发存活植物回血 + 阵亡植物复活
    （复活的植物不参与上面第 1-7 步的攻击）
@@ -571,6 +615,22 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 
 在任何阶段（移动中、啃植物中）都可以被结算攻击命中。
 
+### 5.4 僵尸状态效果
+
+僵尸可以同时承受多种状态效果：
+
+| 状态 | 来源元素 | 行为 |
+|------|---------|------|
+| slow | ice | 移动和啃食速度降低，持续一段时间 |
+| burn | fire | 每秒受灼烧伤害，持续一段时间 |
+| stun | stun | 完全停止移动和啃食，持续一段时间 |
+
+**状态规则**：
+- 同种状态不叠加，后施加的刷新持续时间
+- 不同种状态可共存（一只僵尸可以同时被减速和灼烧）
+- knockback 是一次性位移，不作为持续状态，命中时直接修改僵尸位置（不推出屏幕右边界）
+- electric 传导是瞬时伤害，不产生持续状态
+
 ---
 
 ## 六、指法阶段与进度系统
@@ -583,9 +643,14 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 | 第 2 阶段 | 中间行 ASDF JKL; | 寒冰射手 | 1 路 | 胖僵尸 |
 | 第 3 阶段 | 上行 QWER UIOP | 双发射手 | 1 路 | 旗手僵尸 |
 | 第 4 阶段 | 下行 ZXCV NM | 火炬树桩 | 2 路 | — |
-| 第 5 阶段 | 全键盘混合 | 大喷菇 | 3 路 | — |
-| 第 6 阶段 | 简单单词 | 猫尾草 | 3 路 | 待设计 |
-| 第 7 阶段 | 短句 / 拼音 | 待设计 | 3 路 | 待设计 |
+| 第 5 阶段 | 全键盘混合 | 仙人掌 | 2 路 | — |
+| 第 6 阶段 | 简单单词 | 闪电芦苇 | 2 路 | 待设计 |
+| 第 7 阶段 | 简单单词进阶 | 玉米投手 | 3 路 | 待设计 |
+| 第 8 阶段 | 混合单词 | 大喷菇 | 3 路 | 待设计 |
+| 第 9 阶段 | 混合单词进阶 | 猫尾草 | 3 路 | 待设计 |
+| 第 10 阶段 | 短句 | 飓风花 | 3 路 | 待设计 |
+| 第 11 阶段 | 短句进阶 | 西瓜投手 | 3 路 | 待设计 |
+| 第 12 阶段 | 综合挑战 | 星星果 | 3 路 | 待设计 |
 
 ### 6.2 通关规则
 
@@ -792,10 +857,10 @@ SaveData {
 
 | 模块 | 内容 |
 |------|------|
-| 协同攻击系统 | 植物组合判断 + 攻击类型变化 |
+| 协同攻击系统 | 四维特效合成（Element × Spread × Flight × Impact） |
 | 即时反馈 | 音效 + 命中特效 + 连击切换动画 |
 | 波次总结 | 每波结束展示数据和称号 |
-| 多种攻击类型 | 单体/穿透/范围/全行爆炸 |
+| 僵尸状态系统 | slow/burn/stun 状态效果 + knockback 位移 |
 
 ### P2 - 难度与深度
 
@@ -827,64 +892,76 @@ SaveData {
 {
   "plants": [
     {
-      "id": "peashooter",
-      "name": "豌豆射手",
-      "comboSegment": 4,
-      "attackPower": 10,
-      "element": "normal",
-      "trajectory": "direct",
-      "hp": 100,
+      "id": "peashooter", "name": "豌豆射手",
+      "comboSegment": 4, "attackPower": 10, "hp": 100,
+      "element": "normal", "spread": "single", "flight": "straight", "impact": "vanish",
       "unlockStage": 1
     },
     {
-      "id": "snow_pea",
-      "name": "寒冰射手",
-      "comboSegment": 4,
-      "attackPower": 8,
-      "element": "ice",
-      "trajectory": "direct",
-      "hp": 100,
+      "id": "snow_pea", "name": "寒冰射手",
+      "comboSegment": 4, "attackPower": 8, "hp": 100,
+      "element": "ice", "spread": "single", "flight": "straight", "impact": "vanish",
       "unlockStage": 2
     },
     {
-      "id": "repeater",
-      "name": "双发射手",
-      "comboSegment": 4,
-      "attackPower": 18,
-      "element": "normal",
-      "trajectory": "direct",
-      "hp": 100,
+      "id": "repeater", "name": "双发射手",
+      "comboSegment": 4, "attackPower": 18, "hp": 100,
+      "element": "normal", "spread": "burst", "flight": "straight", "impact": "vanish",
       "unlockStage": 3
     },
     {
-      "id": "torchwood",
-      "name": "火炬树桩",
-      "comboSegment": 8,
-      "attackPower": 25,
-      "element": "fire",
-      "trajectory": "direct",
-      "hp": 120,
+      "id": "torchwood", "name": "火炬树桩",
+      "comboSegment": 8, "attackPower": 25, "hp": 120,
+      "element": "fire", "spread": "single", "flight": "straight", "impact": "vanish",
       "unlockStage": 4
     },
     {
-      "id": "fume_shroom",
-      "name": "大喷菇",
-      "comboSegment": 16,
-      "attackPower": 30,
-      "element": "normal",
-      "trajectory": "area",
-      "hp": 150,
+      "id": "cactus", "name": "仙人掌",
+      "comboSegment": 4, "attackPower": 12, "hp": 100,
+      "element": "normal", "spread": "single", "flight": "straight", "impact": "pierce",
       "unlockStage": 5
     },
     {
-      "id": "cattail",
-      "name": "猫尾草",
-      "comboSegment": "待定",
-      "attackPower": "待定",
-      "element": "normal",
-      "trajectory": "tracking",
-      "hp": "待定",
+      "id": "lightning_reed", "name": "闪电芦苇",
+      "comboSegment": 4, "attackPower": 10, "hp": 80,
+      "element": "electric", "spread": "single", "flight": "straight", "impact": "vanish",
       "unlockStage": 6
+    },
+    {
+      "id": "kernel_pult", "name": "玉米投手",
+      "comboSegment": 8, "attackPower": 20, "hp": 120,
+      "element": "stun", "spread": "single", "flight": "straight", "impact": "explode",
+      "unlockStage": 7
+    },
+    {
+      "id": "fume_shroom", "name": "大喷菇",
+      "comboSegment": 16, "attackPower": 30, "hp": 150,
+      "element": "normal", "spread": "fan", "flight": "straight", "impact": "vanish",
+      "unlockStage": 8
+    },
+    {
+      "id": "cattail", "name": "猫尾草",
+      "comboSegment": 8, "attackPower": 15, "hp": 100,
+      "element": "normal", "spread": "single", "flight": "tracking", "impact": "chain",
+      "unlockStage": 9
+    },
+    {
+      "id": "hurricane_flower", "name": "飓风花",
+      "comboSegment": 8, "attackPower": 15, "hp": 120,
+      "element": "knockback", "spread": "single", "flight": "straight", "impact": "vanish",
+      "unlockStage": 10
+    },
+    {
+      "id": "melon_pult", "name": "西瓜投手",
+      "comboSegment": 12, "attackPower": 35, "hp": 150,
+      "element": "normal", "spread": "single", "flight": "straight", "impact": "explode",
+      "unlockStage": 11
+    },
+    {
+      "id": "starfruit", "name": "星星果",
+      "comboSegment": 12, "attackPower": 20, "hp": 100,
+      "element": "electric", "spread": "fan", "flight": "tracking", "impact": "vanish",
+      "unlockStage": 12
     }
   ]
 }
@@ -903,20 +980,23 @@ SaveData {
     "6": "待定（建议 3.0）"
   },
   "elementPriority": {
-    "normal": 0,
-    "ice": 1,
-    "fire": 1,
-    "_rule": "同优先级的 ice + fire 互相抵消回 normal"
+    "normal": 0, "ice": 1, "fire": 1, "electric": 2, "stun": 3, "knockback": 4,
+    "_rule": "同优先级的 ice + fire 互相抵消，移除后取剩余最高"
   },
-  "trajectoryPriority": {
-    "direct": 0,
-    "tracking": 1,
-    "pierce": 2,
-    "area": 3
-  },
-  "elementEffects": {
-    "ice": { "type": "slow", "value": "待定", "duration": "待定" },
-    "fire": { "type": "burn", "dps": "待定", "duration": "待定" }
+  "spreadPriority": { "single": 0, "burst": 1, "fan": 2 },
+  "flightPriority": { "straight": 0, "tracking": 1 },
+  "impactPriority": { "vanish": 0, "chain": 1, "pierce": 2, "explode": 3 },
+  "effectParams": {
+    "ice": { "slowRatio": "待定", "slowDuration": "待定" },
+    "fire": { "burnDps": "待定", "burnDuration": "待定" },
+    "electric": { "conductRadius": "待定", "conductDamageDecay": "待定", "conductMaxJumps": "待定" },
+    "stun": { "stunDuration": "待定" },
+    "knockback": { "knockbackDistance": "待定" },
+    "burst": { "burstCount": "待定", "burstInterval": "待定" },
+    "fan": { "fanBulletCount": "待定", "fanSpreadAngle": "待定" },
+    "tracking": { "trackingTurnRate": "待定" },
+    "chain": { "chainBounces": "待定", "chainRange": "待定" },
+    "explode": { "explodeRadius": "待定", "explodeDamageRatio": "待定" }
   }
 }
 ```
@@ -966,12 +1046,10 @@ SaveData {
 |------|------|------|
 | 自适应难度算法 | 📌 后续迭代 | 初版用随机，后续加入字母熟练度追踪 |
 | ~~植物自定义排列~~ | ✅ 已纳入 Slot 机制 | 见 4.3 节 Slot 槽设计 |
-| 更多植物（第 6-7 阶段） | 📌 后续设计 | 等核心机制跑通 |
 | 更多僵尸类型 | 📌 后续扩展 | 通过策略配置新增 |
-| 更多协同规则 | 📌 后续扩展 | 通过策略配置新增 |
 | 反馈系统丰富化 | 📌 后续迭代 | 更多音效、特效、称号 |
 | 手指热力图 | 📌 后续迭代 | 需要数据采集和可视化 |
 
 ---
 
-*文档版本：v1.7 | 变更：多路系统重写——锁定模式选路（锁定后只看当前路）、出题约束精确化（仅自由匹配状态需各路字母不重复）、僵尸随机分路、空路允许、辐射弹道可跨路命中；新增 Slot 机制（玩家自选植物组合填入 slot 槽，各路可不同，slot 值为持久化状态通关奖励增长）；植物排列改为玩家自由决定；数据模型更新 Lane/SaveData。v1.6 变更保留。*
+*文档版本：v1.8 | 变更：特效合成系统 v2——从二维（element × trajectory）重构为四维正交（Element × Spread × Flight × Impact），组合空间从 12 扩展到 144；元素新增 electric/stun/knockback，发射模式新增 burst，命中行为新增 chain/explode；新增僵尸状态系统（slow/burn/stun）；初版植物从 6 棵扩展到 12 棵覆盖全部维度值；指法阶段从 7 扩展到 12。v1.7 变更保留。*
