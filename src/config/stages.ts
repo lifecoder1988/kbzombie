@@ -72,4 +72,40 @@ export const STAGES: readonly StageDef[] = [
       },
     ],
   },
+  {
+    id: 5,
+    name: '2路演示',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['peashooter', 'snow_pea'],
+    levels: [
+      {
+        id: 1,
+        laneCount: 2,
+        waves: [
+          { zombieType: 'normal', count: 8, interval: 2000 },
+          { zombieType: 'normal', count: 10, interval: 1500 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 6,
+    name: '3路演示',
+    letters: ['f', 'j', 'd', 'k', 's', 'l', 'a'],
+    plants: ['peashooter'],
+    levels: [
+      {
+        id: 1,
+        laneCount: 3,
+        lanePlants: [
+          ['peashooter', 'snow_pea'],
+          ['peashooter'],
+          [],
+        ],
+        waves: [
+          { zombieType: 'normal', count: 10, interval: 1500 },
+        ],
+      },
+    ],
+  },
 ]
