@@ -89,13 +89,16 @@ export class ProjectileEntity implements Entity {
     this.maxTurnRate = config.maxTurnRate ?? Math.PI
 
     // Set initial heading
-    if (config.flight === 'tracking' && config.target) {
+    // Fan + tracking: use fan angle first, then tracking turns toward target over time
+    if (config.angle !== undefined) {
+      this.heading = config.angle
+    } else if (config.flight === 'tracking' && config.target) {
       this.heading = Math.atan2(
         config.target.y - config.y,
         config.target.x - config.x,
       )
     } else {
-      this.heading = config.angle ?? 0
+      this.heading = 0
     }
   }
 
