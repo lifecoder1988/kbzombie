@@ -226,9 +226,24 @@ export class BattleManager {
     }
   }
 
+  private resolveZombieType(wave: WaveConfig): string {
+    if (wave.zombies && wave.zombies.length > 0) {
+      let totalWeight = 0
+      for (const entry of wave.zombies) totalWeight += entry.weight
+      let roll = Math.random() * totalWeight
+      for (const entry of wave.zombies) {
+        roll -= entry.weight
+        if (roll <= 0) return entry.type
+      }
+      return wave.zombies[wave.zombies.length - 1].type
+    }
+    return wave.zombieType!
+  }
+
   private spawnZombie(): void {
     const wave = this.config.waves[this._currentWave]
-    const zombieConfig = this.config.zombieConfigs[wave.zombieType]
+    const zombieType = this.resolveZombieType(wave)
+    const zombieConfig = this.config.zombieConfigs[zombieType]
     const { canvasWidth } = this.config
     const id = `zombie_${this.zombieIdCounter++}`
     const spawnX = canvasWidth + 20

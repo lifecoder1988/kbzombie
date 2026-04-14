@@ -42,11 +42,18 @@ export interface ZombieConfig {
   readonly color: string
 }
 
+/** 混合出怪条目 */
+export interface WaveZombieEntry {
+  readonly type: string       // ZombieDef.id
+  readonly weight: number     // 出现权重
+}
+
 /** 波次配置 */
 export interface WaveConfig {
-  readonly zombieType: string  // 僵尸类型 id
   readonly count: number       // 本波僵尸数量
   readonly interval: number    // 生成间隔（毫秒）
+  readonly zombieType?: string                    // 单类型（向后兼容）
+  readonly zombies?: readonly WaveZombieEntry[]   // 混合出怪
 }
 
 /** 结算结果 */

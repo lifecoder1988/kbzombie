@@ -235,6 +235,27 @@ describe('BattleManager', () => {
   })
 })
 
+describe('混合出怪', () => {
+  it('混合波次能生成不同类型僵尸', () => {
+    const fatZombie = { hp: 150, speed: 15, chewDps: 5, width: 55, height: 70, color: '#668844' }
+    const mgr = createManager({
+      waves: [{
+        count: 20,
+        interval: 100,
+        zombies: [
+          { type: 'normal', weight: 1 },
+          { type: 'fat', weight: 1 },
+        ],
+      }],
+      zombieConfigs: { normal: TEST_ZOMBIE, fat: fatZombie },
+    })
+    for (let i = 0; i < 40; i++) mgr.update(100)
+    const zombies = mgr.getZombies()
+    const widths = new Set(zombies.map(z => z.width))
+    expect(widths.size).toBeGreaterThanOrEqual(2)
+  })
+})
+
 // === Multi-lane tests ===
 
 const LANE0_PLANTS: PlantConfig[] = [

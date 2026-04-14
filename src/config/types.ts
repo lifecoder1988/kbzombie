@@ -32,11 +32,18 @@ export interface ZombieDef {
   readonly color: string
 }
 
+/** 混合出怪条目 */
+export interface WaveZombieEntry {
+  readonly type: string       // ZombieDef.id
+  readonly weight: number     // 出现权重
+}
+
 /** 单波配置 */
 export interface WaveDef {
-  readonly zombieType: string     // 引用 ZombieDef.id
   readonly count: number          // 本波僵尸数量
   readonly interval: number       // 生成间隔（毫秒）
+  readonly zombieType?: string                    // 单类型（向后兼容）
+  readonly zombies?: readonly WaveZombieEntry[]   // 混合出怪
 }
 
 /** 关卡配置 */
