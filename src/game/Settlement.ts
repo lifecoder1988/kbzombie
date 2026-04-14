@@ -1,35 +1,79 @@
-import type { PlantState, SettlementResult } from './types'
+import type { PlantState, SettlementResult, SynthesizedEffect } from './types'
+import { synthesizeEffects } from './EffectSynthesis'
 
-/**
- * 计算结算攻击力。
- * 激活条件：连击打满该植物的全部段数（未打满不算激活）。
- */
 export function calculateSettlement(
   plants: readonly PlantState[],
   comboCount: number,
   isFullChain: boolean,
+  synergyMultiplier: Readonly<Record<number, number>>,
 ): SettlementResult {
+  const empty: SettlementResult = {
+    totalPower: 0,
+    activatedIndices: [],
+    aliveActivatedIndices: [],
+    isFullChain: false,
+    synergyMultiplier: 1.0,
+    perPlantPower: [],
+    synthesizedEffect: { element: 'normal', trajectory: 'direct' },
+  }
+
   if (comboCount <= 0) {
-    return { totalPower: 0, activatedIndices: [], aliveActivatedIndices: [], isFullChain: false }
+    return empty
   }
 
   const activatedIndices: number[] = []
   const aliveActivatedIndices: number[] = []
-  let totalPower = 0
   let segmentEnd = 0
 
   for (let i = 0; i < plants.length; i++) {
     const plant = plants[i]
     segmentEnd += plant.config.comboSegment
-    // 只有连击达到该植物段末尾才算激活
     if (comboCount >= segmentEnd) {
       activatedIndices.push(i)
       if (plant.alive) {
         aliveActivatedIndices.push(i)
-        totalPower += plant.config.attackPower
       }
     }
   }
 
-  return { totalPower, activatedIndices, aliveActivatedIndices, isFullChain }
+  const aliveCount = aliveActivatedIndices.length
+  if (aliveCount === 0) {
+    return { ...empty, activatedIndices, isFullChain }
+  }
+
+  // Lookup multiplier: use exact count or fallback to max configured key <= aliveCount
+  let multiplier = synergyMultiplier[aliveCount]
+  if (multiplier === undefined) {
+    let maxKey = 0
+    for (const key in synergyMultiplier) {
+      const k = Number(key)
+      if (k <= aliveCount && k > maxKey) maxKey = k
+    }
+    multiplier = maxKey > 0 ? synergyMultiplier[maxKey] : 1.0
+  }
+
+  const perPlantPower: number[] = []
+  let totalPower = 0
+  for (const idx of aliveActivatedIndices) {
+    const power = plants[idx].config.attackPower * multiplier
+    perPlantPower.push(power)
+    totalPower += power
+  }
+
+  // Synthesize effects from alive activated plants only
+  const effectInputs = aliveActivatedIndices.map(idx => ({
+    element: plants[idx].config.element,
+    trajectory: plants[idx].config.trajectory,
+  }))
+  const synthesizedEffect: SynthesizedEffect = synthesizeEffects(effectInputs)
+
+  return {
+    totalPower,
+    activatedIndices,
+    aliveActivatedIndices,
+    isFullChain,
+    synergyMultiplier: multiplier,
+    perPlantPower,
+    synthesizedEffect,
+  }
 }
