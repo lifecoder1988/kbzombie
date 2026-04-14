@@ -88,12 +88,21 @@
 
 ### 完成标准
 
-- [ ] 能完整打完一关（多波僵尸）
-- [ ] 连击链条正确推进，按错/空格正确结算
-- [ ] 僵尸能啃植物，植物会阵亡
-- [ ] 打满连击能复活阵亡植物、回血存活植物
-- [ ] 放过数超限触发失败，能重打当前关
-- [ ] 波次之间植物状态保持（不恢复）
+- [x] 能完整打完一关（多波僵尸）
+- [x] 连击链条正确推进，按错/空格正确结算
+- [x] 僵尸能啃植物，植物会阵亡
+- [x] 打满连击能复活阵亡植物、回血存活植物
+- [x] 放过数超限触发失败，能重打当前关
+- [x] 波次之间植物状态保持（不恢复）
+
+> **已完成** — 10 个游戏逻辑模块 + 2 个场景 + 105 个单元测试 + 浏览器验收。详见 `docs/plans/2026-04-14-stage2-core-battle.md`。
+>
+> **实现要点**：
+> - 游戏逻辑层 TDD 开发：Settlement、LetterProvider、PlantChain、ComboSystem、InputHandler、ZombieEntity、ProjectileEntity、BattleManager
+> - 弹道系统：真实飞行实体 + AABB 碰撞检测，非瞬时伤害
+> - 植物激活条件：连击打满该植物全部段数才算激活（非"经过即激活"，GAME_DESIGN 已同步更新）
+> - 植物链条字母全显示：每棵植物头顶显示全部段字母，已打过灰显、当前金色高亮
+> - 植物宽度按段数比例分配
 
 **验收原则**：只有一路、一种僵尸、几棵固定植物，数值硬编码，但核心循环完整、手感可验证。
 
@@ -217,3 +226,4 @@
 | [TESTING_STRATEGY.md](./TESTING_STRATEGY.md) | 测试策略（四层测试、无头集成、AI 测试流程） |
 | [plans/2026-04-13-stage1-game-engine.md](./plans/2026-04-13-stage1-game-engine.md) | 阶段一实现计划（已完成） |
 | [plans/2026-04-13-engine-upgrade-for-stage2.md](./plans/2026-04-13-engine-upgrade-for-stage2.md) | 阶段二前引擎升级设计（已完成） |
+| [plans/2026-04-14-stage2-core-battle.md](./plans/2026-04-14-stage2-core-battle.md) | 阶段二核心战斗机制实现计划（已完成） |
