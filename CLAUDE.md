@@ -105,6 +105,8 @@ kbzombie/
 
 - 改配置加功能，不改引擎加功能
 - 新增植物/僵尸/关卡/波次 → 改 `src/config/` 下对应文件，不改 game/ 或 engine/
+- 新增植物只需声明四维标签（element/spread/flight/impact），自动参与特效合成，不改 EffectSynthesis 代码
+- 效果参数（减速比例、灼烧DPS、爆炸半径等）走 `effectParams` 配置，不硬编码在 game/ 中
 - 不引入引擎层不需要的游戏概念（引擎不应出现 zombie、plant 等词）
 - 不提前抽象——需要复用时再抽，不预测未来需求
 - 不加 TODO 注释标记未来工作——未来工作在 ROADMAP 里跟踪
