@@ -81,15 +81,29 @@ export class BattleScene implements Scene {
     const plantStates = this.manager.getPlantStates()
     const comboCount = this.manager.comboCount
 
+    // Determine which plant the next combo hit would land on
+    const nextCombo = comboCount + 1
+    let currentPlantIdx = 0
+    let segSum = 0
+    for (let i = 0; i < PLANTS.length; i++) {
+      segSum += PLANTS[i].segments
+      if (nextCombo <= segSum) { currentPlantIdx = i; break }
+      if (i === PLANTS.length - 1) currentPlantIdx = i
+    }
+    // If combo is 0, letter goes on plant 0
+    if (comboCount === 0) currentPlantIdx = 0
+
     for (let i = 0; i < this.plantEntities.length; i++) {
       const entity = this.plantEntities[i]
       if (i < plantStates.length) {
         entity.syncState(plantStates[i])
       }
-      // Highlight the plant at the current combo position (next hit lands here)
-      entity.highlighted = i === comboCount
-      // Show the current letter on the plant at the current combo position
-      entity.currentLetter = i === comboCount ? this.manager.currentLetter : ''
+      // Highlight all plants already activated by the current combo
+      let plantStart = 0
+      for (let j = 0; j < i; j++) plantStart += PLANTS[j].segments
+      entity.highlighted = comboCount > 0 && comboCount > plantStart
+      // Show the current letter on the plant where the next hit lands
+      entity.currentLetter = i === currentPlantIdx ? this.manager.currentLetter : ''
     }
   }
 

@@ -260,6 +260,8 @@ export class BattleManager {
     const allProcessed = this.processedInWave >= wave.count
 
     if (allSpawned && allProcessed) {
+      this.combo.reset()
+      this._currentLetter = this.letters.next()
       this._currentWave++
       if (this._currentWave >= this.config.waves.length) {
         this._status = BattleStatus.Victory
@@ -298,12 +300,15 @@ export class BattleManager {
     const plants = this.plantChain.getStates()
     const result = calculateSettlement(plants, comboCount, isFullChain)
 
-    // Fire projectiles from each alive activated plant
+    // Fire projectiles from each alive activated plant, splitting total power evenly
+    const powerPerProjectile = result.aliveActivatedIndices.length > 0
+      ? result.totalPower / result.aliveActivatedIndices.length
+      : 0
     for (const plantIdx of result.aliveActivatedIndices) {
       const px = this.plantPositions[plantIdx]
       const py = this.laneY + PLANT_WIDTH / 2
       const id = `proj_${this.projectileIdCounter++}`
-      const proj = new ProjectileEntity(id, px, py, this.config.projectileSpeed, result.totalPower, this.config.canvasWidth)
+      const proj = new ProjectileEntity(id, px, py, this.config.projectileSpeed, powerPerProjectile, this.config.canvasWidth)
       this.entityManager.add(proj)
       this._pendingProjectiles++
     }
