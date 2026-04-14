@@ -161,13 +161,23 @@
 
 ### 完成标准
 
-- [ ] 结算时正确匹配协同规则并计算加成
-- [ ] 穿透 / 范围攻击正确命中多只僵尸
+- [x] 结算时正确匹配协同规则并计算加成
+- [x] 穿透 / 范围攻击正确命中多只僵尸
 - [ ] 2 路和 3 路模式可玩，各路独立运作
 - [ ] 多路出题保证首位僵尸字母不重复
 - [ ] 空格释放 + 字母键隐含选路流程顺畅
 - [ ] 胖僵尸、旗手、单词僵尸各有正确行为
-- [ ] 协同规则走配置，新增协同不改代码
+- [x] 协同规则走配置，新增协同不改代码
+
+> **4.1 + 4.2 已完成** — 新增 EffectSynthesis 特效合成模块 + Settlement 协同倍率 + ProjectileEntity 4 种弹道（direct/pierce/area/tracking）+ element 渲染 + BattleManager 集成。157 个测试通过。详见 `docs/plans/2026-04-14-stage4-synergy-and-attack-types.md`（设计）和 `docs/plans/2026-04-14-stage4-synergy-and-attack-types-impl.md`（实现计划）。
+>
+> **实现要点**：
+> - 协同倍率查表：按激活存活植物数量查 config，支持 fallback 到最大已配置 key
+> - 伤害独立计算：每棵植物 attackPower × 协同倍率，各自携带独立伤害
+> - 特效合成：元素维度（ice+fire 抵消）× 弹道维度（取最高优先级），纯函数可独立测试
+> - 辐射弹道：扇形散射多颗子弹，正前方必有一颗，areaDamageDecay 衰减系数可配
+> - 追踪弹道：每帧转向目标，受 trackingTurnRate 限制，目标死亡后惯性飞行
+> - 穿透弹道：hitSet 记录已命中僵尸，命中后不消失继续飞行
 
 **验收原则**：3 路 + 多种僵尸 + 协同攻击，有策略选择的完整战斗。
 
@@ -239,3 +249,5 @@
 | [plans/2026-04-13-engine-upgrade-for-stage2.md](./plans/2026-04-13-engine-upgrade-for-stage2.md) | 阶段二前引擎升级设计（已完成） |
 | [plans/2026-04-14-stage2-core-battle.md](./plans/2026-04-14-stage2-core-battle.md) | 阶段二核心战斗机制实现计划（已完成） |
 | [plans/2026-04-14-stage3-config-layer.md](./plans/2026-04-14-stage3-config-layer.md) | 阶段三策略配置层实现计划（已完成） |
+| [plans/2026-04-14-stage4-synergy-and-attack-types.md](./plans/2026-04-14-stage4-synergy-and-attack-types.md) | 阶段四协同攻击+多弹道设计文档（4.1+4.2 已完成） |
+| [plans/2026-04-14-stage4-synergy-and-attack-types-impl.md](./plans/2026-04-14-stage4-synergy-and-attack-types-impl.md) | 阶段四协同攻击+多弹道实现计划（4.1+4.2 已完成） |
