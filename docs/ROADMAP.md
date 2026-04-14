@@ -163,10 +163,10 @@
 
 - [x] 结算时正确匹配协同规则并计算加成
 - [x] 穿透 / 范围攻击正确命中多只僵尸
-- [ ] 2 路和 3 路模式可玩，各路独立运作（含空路）
-- [ ] 锁定模式选路正确（锁定后只看当前路，结算后解除）
-- [ ] 自由匹配状态下各路当前字母不重复
-- [ ] Slot 机制：玩家可自选植物组合填入各路，受 slotSize 限制
+- [x] 2 路和 3 路模式可玩，各路独立运作（含空路）
+- [x] 锁定模式选路正确（锁定后只看当前路，结算后解除）
+- [x] 自由匹配状态下各路当前字母不重复
+- [x] Slot 机制：validateSlot 校验函数就绪，植物选择 UI 属阶段五
 - [ ] 胖僵尸、旗手、单词僵尸各有正确行为
 - [x] 协同规则走配置，新增协同不改代码
 
@@ -179,6 +179,18 @@
 > - 辐射弹道：扇形散射多颗子弹，正前方必有一颗，areaDamageDecay 衰减系数可配
 > - 追踪弹道：每帧转向目标，受 trackingTurnRate 限制，目标死亡后惯性飞行
 > - 穿透弹道：hitSet 记录已命中僵尸，命中后不消失继续飞行
+>
+> **4.3 已完成** — Lane 类 + BattleManager 多路重构 + 锁定模式选路 + BattleScene 多路渲染 + validateSlot 校验。201 个测试通过。详见 `docs/plans/2026-04-14-stage4-multi-lane.md`。
+>
+> **实现要点**：
+> - Lane 类封装单路状态（PlantChain + ComboSystem + 字母序列 + 布局）
+> - BattleManager 持有 Lane 数组，laneCount=1 时向后兼容
+> - 锁定模式：匹配某路后锁定，只看当前路字母，结算/按错/打满解除
+> - 僵尸随机分路，zombieLanes Map 追踪，按路独立啃植物
+> - 出题冲突避免：LetterProvider.nextExcluding + 结算后重新生成检查
+> - 辐射弹道扇形可跨路，追踪弹道全局锁定最近僵尸
+> - 植物宽度按全局最大段数对齐，各路视觉一致
+> - LevelDef 新增 laneCount + lanePlants，config 驱动多路
 
 **验收原则**：3 路 + 多种僵尸 + 协同攻击，有策略选择的完整战斗。
 
@@ -252,3 +264,4 @@
 | [plans/2026-04-14-stage3-config-layer.md](./plans/2026-04-14-stage3-config-layer.md) | 阶段三策略配置层实现计划（已完成） |
 | [plans/2026-04-14-stage4-synergy-and-attack-types.md](./plans/2026-04-14-stage4-synergy-and-attack-types.md) | 阶段四协同攻击+多弹道设计文档（4.1+4.2 已完成） |
 | [plans/2026-04-14-stage4-synergy-and-attack-types-impl.md](./plans/2026-04-14-stage4-synergy-and-attack-types-impl.md) | 阶段四协同攻击+多弹道实现计划（4.1+4.2 已完成） |
+| [plans/2026-04-14-stage4-multi-lane.md](./plans/2026-04-14-stage4-multi-lane.md) | 阶段四多路系统+Slot机制实现计划（4.3 已完成） |
