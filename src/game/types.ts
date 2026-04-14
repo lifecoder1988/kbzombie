@@ -1,3 +1,11 @@
+export type Element = 'normal' | 'ice' | 'fire'
+export type Trajectory = 'direct' | 'tracking' | 'pierce' | 'area'
+
+export interface SynthesizedEffect {
+  readonly element: Element
+  readonly trajectory: Trajectory
+}
+
 /** 植物配置（硬编码，阶段三再抽配置文件） */
 export interface PlantConfig {
   readonly id: string
@@ -5,6 +13,8 @@ export interface PlantConfig {
   readonly comboSegment: number
   readonly attackPower: number
   readonly hp: number
+  readonly element: Element
+  readonly trajectory: Trajectory
 }
 
 /** 植物运行时状态 */
@@ -40,6 +50,9 @@ export interface SettlementResult {
   readonly aliveActivatedIndices: readonly number[]
   /** 是否打满整条链条 */
   readonly isFullChain: boolean
+  readonly synergyMultiplier: number
+  readonly perPlantPower: readonly number[]
+  readonly synthesizedEffect: SynthesizedEffect
 }
 
 /** 战斗状态枚举 */
