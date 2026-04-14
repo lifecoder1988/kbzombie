@@ -53,7 +53,9 @@ export class BattleScene implements Scene {
           attackPower: def.attackPower,
           hp: def.hp,
           element: def.element,
-          trajectory: def.trajectory,
+          spread: def.spread,
+          flight: def.flight,
+          impact: def.impact,
         }
       })
 
@@ -87,10 +89,7 @@ export class BattleScene implements Scene {
       canvasWidth: this.canvasWidth,
       canvasHeight: this.canvasHeight,
       synergyMultiplier: SYNERGY_PARAMS.multiplier,
-      areaBulletCount: BATTLE_PARAMS.areaBulletCount,
-      areaSpreadAngle: BATTLE_PARAMS.areaSpreadAngle,
-      areaDamageDecay: BATTLE_PARAMS.areaDamageDecay,
-      trackingTurnRate: BATTLE_PARAMS.trackingTurnRate,
+      effectParams: BATTLE_PARAMS.effectParams,
     })
 
     // Build plant entities per lane using manager's lane layout

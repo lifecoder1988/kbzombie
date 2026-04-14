@@ -3,8 +3,8 @@ import { Lane } from '../Lane'
 import type { PlantConfig } from '../types'
 
 const PLANTS: PlantConfig[] = [
-  { id: 'a', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', trajectory: 'direct' },
-  { id: 'b', name: 'B', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', trajectory: 'direct' },
+  { id: 'a', name: 'A', comboSegment: 4, attackPower: 10, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
+  { id: 'b', name: 'B', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', spread: 'single', flight: 'straight', impact: 'vanish' },
 ]
 
 describe('Lane', () => {

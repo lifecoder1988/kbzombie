@@ -9,6 +9,19 @@ import { ZombieEntity } from './ZombieEntity'
 import { ProjectileEntity } from './ProjectileEntity'
 import { ZombieState } from './types'
 
+export interface EffectParams {
+  readonly burst: { readonly burstCount: number; readonly burstInterval: number }
+  readonly fan: { readonly fanBulletCount: number; readonly fanSpreadAngle: number }
+  readonly tracking: { readonly trackingTurnRate: number }
+  readonly chain: { readonly chainBounces: number; readonly chainRange: number }
+  readonly explode: { readonly explodeRadius: number; readonly explodeDamageRatio: number }
+  readonly ice: { readonly slowRatio: number; readonly slowDuration: number }
+  readonly fire: { readonly burnDps: number; readonly burnDuration: number }
+  readonly electric: { readonly conductRadius: number; readonly conductDamageDecay: number; readonly conductMaxJumps: number }
+  readonly stun: { readonly stunDuration: number }
+  readonly knockback: { readonly knockbackDistance: number }
+}
+
 export interface BattleConfig {
   readonly laneCount: number
   readonly lanePlants: readonly (readonly PlantConfig[])[]
@@ -23,10 +36,7 @@ export interface BattleConfig {
   readonly canvasHeight: number
   readonly letterSeed?: number
   readonly synergyMultiplier: Readonly<Record<number, number>>
-  readonly areaBulletCount: number
-  readonly areaSpreadAngle: number
-  readonly areaDamageDecay: number
-  readonly trackingTurnRate: number
+  readonly effectParams: EffectParams
 }
 
 export class BattleManager {
@@ -277,6 +287,7 @@ export class BattleManager {
   private updateCollisions(): void {
     const projectiles = this.entityManager.getByTag('projectile') as ProjectileEntity[]
     const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
+    const params = this.config.effectParams
 
     for (let pi = 0; pi < projectiles.length; pi++) {
       const proj = projectiles[pi]
@@ -290,13 +301,155 @@ export class BattleManager {
         if (intersects(proj, z)) {
           z.takeDamage(proj.power)
           proj.onHit(z.id)
+
+          // Apply element effects
+          this.applyElementEffect(proj.element, z, params)
+
           if (!z.active) {
             this.processedInWave++
           }
-          if (proj.trajectory !== 'pierce') break
+
+          // Handle impact type
+          switch (proj.impact) {
+            case 'pierce':
+              // Don't break — continue checking other zombies
+              continue
+
+            case 'chain':
+              // After hit, check if projectile needs redirect
+              if (proj.needsRedirect) {
+                const nearest = this.findNearestZombieExcluding(proj.x, proj.y, proj, zombies)
+                if (nearest) {
+                  proj.redirectTo(nearest.x, nearest.y)
+                } else {
+                  proj.clearRedirect()
+                  // No more targets, deactivate
+                  proj.active = false
+                }
+              }
+              break
+
+            case 'explode':
+              // Deal area damage to nearby zombies
+              this.applyExplosion(proj.x, proj.y, proj.power, proj.element, z.id, zombies, params)
+              break
+
+            case 'vanish':
+              // Already deactivated by onHit
+              break
+          }
+          break
         }
       }
     }
+  }
+
+  private applyElementEffect(element: Element, zombie: ZombieEntity, params: EffectParams): void {
+    switch (element) {
+      case 'ice':
+        zombie.applyStatus({ type: 'slow', remaining: params.ice.slowDuration, value: params.ice.slowRatio })
+        break
+      case 'fire':
+        zombie.applyStatus({ type: 'burn', remaining: params.fire.burnDuration, value: params.fire.burnDps })
+        break
+      case 'electric':
+        this.applyConduction(zombie, params)
+        break
+      case 'stun':
+        zombie.applyStatus({ type: 'stun', remaining: params.stun.stunDuration, value: 0 })
+        break
+      case 'knockback':
+        zombie.applyKnockback(params.knockback.knockbackDistance, this.config.canvasWidth)
+        // Reassign chew target after knockback
+        {
+          const laneIdx = this.zombieLanes.get(zombie.id) ?? 0
+          const lane = this.lanes[laneIdx]
+          this.assignChewTarget(zombie, lane)
+        }
+        break
+      case 'normal':
+        break
+    }
+  }
+
+  private applyConduction(hitZombie: ZombieEntity, params: EffectParams): void {
+    const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
+    const { conductRadius, conductDamageDecay, conductMaxJumps } = params.electric
+    const visited = new Set<string>()
+    visited.add(hitZombie.id)
+
+    let currentTargets = [hitZombie]
+    let currentDamageMultiplier = conductDamageDecay
+
+    for (let jump = 0; jump < conductMaxJumps; jump++) {
+      const nextTargets: ZombieEntity[] = []
+      for (const source of currentTargets) {
+        let nearest: ZombieEntity | undefined
+        let minDist = Infinity
+        for (const z of zombies) {
+          if (!z.active || visited.has(z.id)) continue
+          const dx = z.x - source.x
+          const dy = z.y - source.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist <= conductRadius && dist < minDist) {
+            minDist = dist
+            nearest = z
+          }
+        }
+        if (nearest) {
+          visited.add(nearest.id)
+          // Conduction damage not applied here — just status
+          nearest.applyStatus({ type: 'stun', remaining: params.stun.stunDuration * 0.5, value: 0 })
+          nextTargets.push(nearest)
+          if (!nearest.active) {
+            this.processedInWave++
+          }
+        }
+      }
+      if (nextTargets.length === 0) break
+      currentTargets = nextTargets
+      currentDamageMultiplier *= conductDamageDecay
+    }
+  }
+
+  private applyExplosion(
+    x: number, y: number, power: number, element: Element,
+    directHitId: string, zombies: ZombieEntity[], params: EffectParams
+  ): void {
+    const { explodeRadius, explodeDamageRatio } = params.explode
+    const splashDamage = power * explodeDamageRatio
+    for (const z of zombies) {
+      if (!z.active || z.id === directHitId) continue
+      const dx = z.x - x
+      const dy = z.y - y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist <= explodeRadius) {
+        z.takeDamage(splashDamage)
+        this.applyElementEffect(element, z, params)
+        if (!z.active) {
+          this.processedInWave++
+        }
+      }
+    }
+  }
+
+  private findNearestZombieExcluding(
+    px: number, py: number, proj: ProjectileEntity, zombies: ZombieEntity[]
+  ): ZombieEntity | undefined {
+    let nearest: ZombieEntity | undefined
+    let minDist = Infinity
+    const range = proj.chainRange
+    for (const z of zombies) {
+      if (!z.active || proj.hasHit(z.id)) continue
+      const dx = z.x - px
+      const dy = z.y - py
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist <= range && dist < minDist) {
+        minDist = dist
+        nearest = z
+      }
+    }
+    return nearest
   }
 
   private updateMissed(): void {
@@ -423,6 +576,7 @@ export class BattleManager {
     const result = calculateSettlement(plants, comboCount, isFullChain, this.config.synergyMultiplier)
 
     const { synthesizedEffect, perPlantPower, aliveActivatedIndices } = result
+    const params = this.config.effectParams
 
     for (let i = 0; i < aliveActivatedIndices.length; i++) {
       const plantIdx = aliveActivatedIndices[i]
@@ -431,28 +585,18 @@ export class BattleManager {
 
       const power = perPlantPower[i]
 
-      if (synthesizedEffect.spread === 'fan') {
-        this.fireAreaProjectiles(px, py, power, synthesizedEffect.element)
-      } else {
-        const isTracking = synthesizedEffect.flight === 'tracking'
-        const isPierce = synthesizedEffect.impact === 'pierce'
-        // Map 4D fields to ProjectileEntity trajectory
-        const trajectory = isPierce ? 'pierce' : isTracking ? 'tracking' : 'direct'
-        const id = `proj_${this.projectileIdCounter++}`
-        const proj = new ProjectileEntity({
-          id,
-          x: px,
-          y: py,
-          speed: this.config.projectileSpeed,
-          power,
-          rightBound: this.config.canvasWidth,
-          trajectory,
-          element: synthesizedEffect.element,
-          target: isTracking ? this.findNearestZombie(px, py) : undefined,
-          maxTurnRate: this.config.trackingTurnRate,
-        })
-        this.entityManager.add(proj)
-        this._pendingProjectiles++
+      switch (synthesizedEffect.spread) {
+        case 'fan':
+          this.fireFanProjectiles(px, py, power, synthesizedEffect, params)
+          break
+
+        case 'burst':
+          this.fireBurstProjectiles(px, py, power, synthesizedEffect, params)
+          break
+
+        case 'single':
+          this.fireSingleProjectile(px, py, power, synthesizedEffect, params)
+          break
       }
     }
 
@@ -462,11 +606,70 @@ export class BattleManager {
     }
   }
 
-  private fireAreaProjectiles(px: number, py: number, power: number, element: Element): void {
-    const count = this.config.areaBulletCount
-    const halfSpread = this.config.areaSpreadAngle / 2
-    const decay = this.config.areaDamageDecay
-    const bulletPower = power * decay
+  private fireSingleProjectile(
+    px: number, py: number, power: number,
+    effect: { element: Element; spread: 'single' | 'burst' | 'fan'; flight: 'straight' | 'tracking'; impact: 'vanish' | 'chain' | 'pierce' | 'explode' },
+    params: EffectParams
+  ): void {
+    const isTracking = effect.flight === 'tracking'
+    const id = `proj_${this.projectileIdCounter++}`
+    const proj = new ProjectileEntity({
+      id,
+      x: px,
+      y: py,
+      speed: this.config.projectileSpeed,
+      power,
+      rightBound: this.config.canvasWidth,
+      element: effect.element,
+      spread: effect.spread,
+      flight: effect.flight,
+      impact: effect.impact,
+      target: isTracking ? this.findNearestZombie(px, py) : undefined,
+      maxTurnRate: params.tracking.trackingTurnRate,
+      chainBounces: params.chain.chainBounces,
+      chainRange: params.chain.chainRange,
+    })
+    this.entityManager.add(proj)
+    this._pendingProjectiles++
+  }
+
+  private fireBurstProjectiles(
+    px: number, py: number, power: number,
+    effect: { element: Element; spread: 'single' | 'burst' | 'fan'; flight: 'straight' | 'tracking'; impact: 'vanish' | 'chain' | 'pierce' | 'explode' },
+    params: EffectParams
+  ): void {
+    const count = params.burst.burstCount
+    for (let i = 0; i < count; i++) {
+      const isTracking = effect.flight === 'tracking'
+      const id = `proj_${this.projectileIdCounter++}`
+      const proj = new ProjectileEntity({
+        id,
+        x: px + i * 8,  // slight x offset for each burst bullet
+        y: py,
+        speed: this.config.projectileSpeed,
+        power,
+        rightBound: this.config.canvasWidth,
+        element: effect.element,
+        spread: effect.spread,
+        flight: effect.flight,
+        impact: effect.impact,
+        target: isTracking ? this.findNearestZombie(px, py) : undefined,
+        maxTurnRate: params.tracking.trackingTurnRate,
+        chainBounces: params.chain.chainBounces,
+        chainRange: params.chain.chainRange,
+      })
+      this.entityManager.add(proj)
+      this._pendingProjectiles++
+    }
+  }
+
+  private fireFanProjectiles(
+    px: number, py: number, power: number,
+    effect: { element: Element; spread: 'single' | 'burst' | 'fan'; flight: 'straight' | 'tracking'; impact: 'vanish' | 'chain' | 'pierce' | 'explode' },
+    params: EffectParams
+  ): void {
+    const count = params.fan.fanBulletCount
+    const halfSpread = params.fan.fanSpreadAngle / 2
 
     // Build angle list: 0 always included, symmetric pairs outward
     const angles: number[] = [0]
@@ -485,17 +688,24 @@ export class BattleManager {
     }
 
     for (let i = 0; i < angles.length; i++) {
+      const isTracking = effect.flight === 'tracking'
       const id = `proj_${this.projectileIdCounter++}`
       const proj = new ProjectileEntity({
         id,
         x: px,
         y: py,
         speed: this.config.projectileSpeed,
-        power: bulletPower,
+        power,
         rightBound: this.config.canvasWidth,
-        trajectory: 'area',
-        element,
+        element: effect.element,
+        spread: effect.spread,
+        flight: effect.flight,
+        impact: effect.impact,
         angle: angles[i],
+        target: isTracking ? this.findNearestZombie(px, py) : undefined,
+        maxTurnRate: params.tracking.trackingTurnRate,
+        chainBounces: params.chain.chainBounces,
+        chainRange: params.chain.chainRange,
       })
       this.entityManager.add(proj)
       this._pendingProjectiles++

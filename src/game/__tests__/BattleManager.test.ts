@@ -3,6 +3,19 @@ import { BattleManager, type BattleConfig } from '../BattleManager'
 import { BattleStatus, ZombieState } from '../types'
 import type { WaveConfig, PlantConfig } from '../types'
 
+const DEFAULT_EFFECT_PARAMS = {
+  burst: { burstCount: 3, burstInterval: 80 },
+  fan: { fanBulletCount: 5, fanSpreadAngle: Math.PI / 3 },
+  tracking: { trackingTurnRate: Math.PI },
+  chain: { chainBounces: 3, chainRange: 200 },
+  explode: { explodeRadius: 80, explodeDamageRatio: 0.6 },
+  ice: { slowRatio: 0.5, slowDuration: 3 },
+  fire: { burnDps: 5, burnDuration: 3 },
+  electric: { conductRadius: 100, conductDamageDecay: 0.7, conductMaxJumps: 3 },
+  stun: { stunDuration: 1.5 },
+  knockback: { knockbackDistance: 60 },
+}
+
 const TEST_PLANTS: PlantConfig[] = [
   { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
   { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', spread: 'single', flight: 'straight', impact: 'vanish' },
@@ -30,10 +43,7 @@ function createManager(overrides?: Partial<BattleConfig>) {
     canvasHeight: 600,
     letterSeed: 42,
     synergyMultiplier: { 1: 1.0, 2: 1.2, 3: 1.5 },
-    areaBulletCount: 5,
-    areaSpreadAngle: Math.PI / 3,
-    areaDamageDecay: 0.8,
-    trackingTurnRate: Math.PI,
+    effectParams: DEFAULT_EFFECT_PARAMS,
     ...overrides,
   })
 }
@@ -137,10 +147,7 @@ describe('BattleManager', () => {
       canvasHeight: 600,
       letterSeed: 42,
       synergyMultiplier: { 1: 1.0, 2: 1.2, 3: 1.5 },
-      areaBulletCount: 5,
-      areaSpreadAngle: Math.PI / 3,
-      areaDamageDecay: 0.8,
-      trackingTurnRate: Math.PI,
+      effectParams: DEFAULT_EFFECT_PARAMS,
     })
 
     for (let i = 0; i < 100; i++) {
@@ -175,11 +182,14 @@ describe('BattleManager', () => {
     expect(mgr.projectileCount).toBe(2)
   })
 
-  it('area 弹道创建 areaBulletCount 颗子弹（奇数）', () => {
-    const areaPlants: PlantConfig[] = [
-      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'fan', flight: 'straight', impact: 'vanish' },
+  it('fan 弹道创建 fanBulletCount 颗子弹（奇数）', () => {
+    const fanPlants: PlantConfig[] = [
+      { id: 'fan_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'fan', flight: 'straight', impact: 'vanish' },
     ]
-    const mgr = createManager({ lanePlants: [areaPlants], areaBulletCount: 3 })
+    const mgr = createManager({
+      lanePlants: [fanPlants],
+      effectParams: { ...DEFAULT_EFFECT_PARAMS, fan: { fanBulletCount: 3, fanSpreadAngle: Math.PI / 3 } },
+    })
     mgr.update(1100)
     for (let i = 0; i < 4; i++) {
       const letter = mgr.currentLane !== null ? mgr.currentLetter : mgr.getLane(0).currentLetter
@@ -188,11 +198,14 @@ describe('BattleManager', () => {
     expect(mgr.projectileCount).toBe(3)
   })
 
-  it('area 弹道偶数颗子弹也能正确创建', () => {
-    const areaPlants: PlantConfig[] = [
-      { id: 'area_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'fan', flight: 'straight', impact: 'vanish' },
+  it('fan 弹道偶数颗子弹也能正确创建', () => {
+    const fanPlants: PlantConfig[] = [
+      { id: 'fan_plant', name: '大喷菇', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'fan', flight: 'straight', impact: 'vanish' },
     ]
-    const mgr = createManager({ lanePlants: [areaPlants], areaBulletCount: 4 })
+    const mgr = createManager({
+      lanePlants: [fanPlants],
+      effectParams: { ...DEFAULT_EFFECT_PARAMS, fan: { fanBulletCount: 4, fanSpreadAngle: Math.PI / 3 } },
+    })
     mgr.update(1100)
     for (let i = 0; i < 4; i++) {
       const letter = mgr.currentLane !== null ? mgr.currentLetter : mgr.getLane(0).currentLetter
