@@ -2,7 +2,7 @@
 export interface PlantConfig {
   readonly id: string
   readonly name: string
-  readonly segments: number
+  readonly comboSegment: number
   readonly attackPower: number
   readonly hp: number
 }

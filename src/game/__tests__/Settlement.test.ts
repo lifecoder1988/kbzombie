@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { calculateSettlement } from '../Settlement'
 import type { PlantState, PlantConfig } from '../types'
 
-function makePlant(index: number, attackPower: number, segments = 4, alive = true): PlantState {
+function makePlant(index: number, attackPower: number, comboSegment = 4, alive = true): PlantState {
   const config: PlantConfig = {
     id: `plant-${index}`,
     name: `Plant ${index}`,
-    segments,
+    comboSegment,
     attackPower,
     hp: 100,
   }

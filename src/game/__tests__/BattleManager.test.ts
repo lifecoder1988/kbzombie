@@ -4,8 +4,8 @@ import { BattleStatus, ZombieState } from '../types'
 import type { WaveConfig, PlantConfig } from '../types'
 
 const TEST_PLANTS: PlantConfig[] = [
-  { id: 'peashooter', name: '豌豆射手', segments: 4, attackPower: 20, hp: 100 },
-  { id: 'snow_pea', name: '寒冰射手', segments: 4, attackPower: 15, hp: 80 },
+  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100 },
+  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80 },
 ]
 
 const TEST_WAVES: WaveConfig[] = [

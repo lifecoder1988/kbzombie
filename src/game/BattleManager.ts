@@ -64,14 +64,14 @@ export class BattleManager {
     this.config = config
     this.entityManager = new EntityManager()
     this.plantChain = new PlantChain(config.plants)
-    this.combo = new ComboSystem(config.plants.map(p => p.segments))
+    this.combo = new ComboSystem(config.plants.map(p => p.comboSegment))
     this.letters = new LetterProvider(config.letterPool, config.letterSeed)
-    const totalSeg = config.plants.reduce((s, p) => s + p.segments, 0)
+    const totalSeg = config.plants.reduce((s, p) => s + p.comboSegment, 0)
     this._chainLetters = Array.from({ length: totalSeg }, () => this.letters.next())
 
     // 植物位置按段数比例分配，占画面左 35%
     const plantAreaWidth = config.canvasWidth * 0.35
-    const totalSeg2 = config.plants.reduce((s, p) => s + p.segments, 0)
+    const totalSeg2 = config.plants.reduce((s, p) => s + p.comboSegment, 0)
     const gap = 8
     const totalGap = gap * (config.plants.length - 1)
     const usableWidth = plantAreaWidth - totalGap
@@ -80,7 +80,7 @@ export class BattleManager {
     const widths: number[] = []
     let curX = startX
     for (let i = 0; i < config.plants.length; i++) {
-      const w = Math.round((config.plants[i].segments / totalSeg2) * usableWidth)
+      const w = Math.round((config.plants[i].comboSegment / totalSeg2) * usableWidth)
       positions.push(curX)
       widths.push(w)
       curX += w + gap

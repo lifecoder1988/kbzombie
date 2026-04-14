@@ -20,7 +20,7 @@ export function calculateSettlement(
 
   for (let i = 0; i < plants.length; i++) {
     const plant = plants[i]
-    segmentEnd += plant.config.segments
+    segmentEnd += plant.config.comboSegment
     // 只有连击达到该植物段末尾才算激活
     if (comboCount >= segmentEnd) {
       activatedIndices.push(i)

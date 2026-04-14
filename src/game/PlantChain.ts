@@ -17,7 +17,7 @@ export class PlantChain {
     let sum = 0
     for (const config of configs) {
       this.segmentStarts.push(sum + 1)
-      sum += config.segments
+      sum += config.comboSegment
     }
     this.totalSegments = sum
   }

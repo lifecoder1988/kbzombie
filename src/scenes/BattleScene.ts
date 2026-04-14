@@ -6,9 +6,9 @@ import { PlantEntity } from '../game/PlantEntity'
 
 // ---- 阶段二硬编码常量（阶段三抽配置） ----
 const PLANTS: PlantConfig[] = [
-  { id: 'peashooter', name: '豌豆射手', segments: 4, attackPower: 20, hp: 100 },
-  { id: 'snow_pea',   name: '寒冰射手', segments: 4, attackPower: 15, hp: 80 },
-  { id: 'repeater',   name: '双发射手', segments: 8, attackPower: 35, hp: 120 },
+  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100 },
+  { id: 'snow_pea',   name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80 },
+  { id: 'repeater',   name: '双发射手', comboSegment: 8, attackPower: 35, hp: 120 },
 ]
 const ZOMBIE_CONFIG: ZombieConfig = { hp: 50, speed: 30, chewDps: 10 }
 const WAVES: WaveConfig[] = [
@@ -55,7 +55,7 @@ export class BattleScene implements Scene {
     // 植物宽度按段数比例分配，占据画面左 35%
     const plantAreaWidth = this.canvasWidth * 0.35
     const laneY = Math.round(this.canvasHeight * 0.4)
-    const totalSegments = PLANTS.reduce((s, p) => s + p.segments, 0)
+    const totalSegments = PLANTS.reduce((s, p) => s + p.comboSegment, 0)
     const gap = 8 // 植物间距
     const totalGap = gap * (PLANTS.length - 1)
     const usableWidth = plantAreaWidth - totalGap
@@ -64,7 +64,7 @@ export class BattleScene implements Scene {
     this.plantEntities = []
     let curX = startX
     for (let i = 0; i < PLANTS.length; i++) {
-      const w = Math.round((PLANTS[i].segments / totalSegments) * usableWidth)
+      const w = Math.round((PLANTS[i].comboSegment / totalSegments) * usableWidth)
       const entity = new PlantEntity(`plant_${i}`, curX, laneY - 30, w, i)
       this.plantEntities.push(entity)
       curX += w + gap
@@ -94,23 +94,23 @@ export class BattleScene implements Scene {
     let segOffset = 0
     for (let i = 0; i < this.plantEntities.length; i++) {
       const entity = this.plantEntities[i]
-      const segments = PLANTS[i].segments
+      const seg = PLANTS[i].comboSegment
 
       if (i < plantStates.length) {
         entity.syncState(plantStates[i])
       }
 
       // 该植物对应的字母片段
-      entity.letters = chainLetters.slice(segOffset, segOffset + segments) as string[]
+      entity.letters = chainLetters.slice(segOffset, segOffset + seg) as string[]
 
       // 该植物中已打过的段数
-      const typedInPlant = Math.max(0, Math.min(segments, comboCount - segOffset))
+      const typedInPlant = Math.max(0, Math.min(seg, comboCount - segOffset))
       entity.typedCount = typedInPlant
 
       // 当前连击目标是否在这棵植物上
-      entity.isCurrentTarget = comboCount >= segOffset && comboCount < segOffset + segments
+      entity.isCurrentTarget = comboCount >= segOffset && comboCount < segOffset + seg
 
-      segOffset += segments
+      segOffset += seg
     }
   }
 
