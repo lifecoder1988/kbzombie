@@ -38,7 +38,7 @@ export class BattleManager {
   private _status: BattleStatus = BattleStatus.Fighting
   private _currentWave = 0
   private _missedCount = 0
-  private _currentLetter: string
+  private _plantLetters: string[]
 
   // wave spawn tracking
   private spawnedInWave = 0
@@ -66,7 +66,7 @@ export class BattleManager {
     this.plantChain = new PlantChain(config.plants)
     this.combo = new ComboSystem(config.plants.map(p => p.segments))
     this.letters = new LetterProvider(config.letterPool, config.letterSeed)
-    this._currentLetter = this.letters.next()
+    this._plantLetters = config.plants.map(() => this.letters.next())
 
     // Plant positions spread across left 25% of canvas
     const leftBound = config.canvasWidth * 0.25
@@ -83,7 +83,27 @@ export class BattleManager {
   get currentWave(): number { return this._currentWave }
   get comboCount(): number { return this.combo.current }
   get missedCount(): number { return this._missedCount }
-  get currentLetter(): string { return this._currentLetter }
+  get currentLetter(): string {
+    const plantIdx = this.getCurrentPlantIndex()
+    return this._plantLetters[plantIdx]
+  }
+
+  /** 每棵植物当前显示的字母 */
+  getPlantLetters(): readonly string[] {
+    return this._plantLetters
+  }
+
+  private getCurrentPlantIndex(): number {
+    const combo = this.combo.current
+    if (combo === 0) return 0
+    return this.plantChain.getPlantIndexAtCombo(combo + 1)
+  }
+
+  private regenerateAllLetters(): void {
+    for (let i = 0; i < this._plantLetters.length; i++) {
+      this._plantLetters[i] = this.letters.next()
+    }
+  }
 
   get zombieCount(): number {
     return this.entityManager.getByTag('zombie').length
@@ -261,7 +281,7 @@ export class BattleManager {
 
     if (allSpawned && allProcessed) {
       this.combo.reset()
-      this._currentLetter = this.letters.next()
+      this.regenerateAllLetters()
       this._currentWave++
       if (this._currentWave >= this.config.waves.length) {
         this._status = BattleStatus.Victory
@@ -275,7 +295,7 @@ export class BattleManager {
   onKeyDown(key: string): void {
     if (this._status !== BattleStatus.Fighting) return
 
-    const action = classifyInput(key, this._currentLetter)
+    const action = classifyInput(key, this.currentLetter)
     let settlement = null
 
     if (action === InputAction.LetterHit) {
@@ -290,9 +310,11 @@ export class BattleManager {
 
     if (settlement) {
       this.executeSettlement(settlement.comboCount, settlement.isFullChain)
-      this._currentLetter = this.letters.next()
+      this.regenerateAllLetters()
     } else if (action === InputAction.LetterHit) {
-      this._currentLetter = this.letters.next()
+      // Regenerate the current target plant's letter for the next input
+      const idx = this.getCurrentPlantIndex()
+      this._plantLetters[idx] = this.letters.next()
     }
   }
 
