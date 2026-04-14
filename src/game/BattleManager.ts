@@ -687,9 +687,16 @@ export class BattleManager {
       angles.push(step / 2)
     }
 
+    const isTracking = effect.flight === 'tracking'
+    // Fan+tracking: each bullet gets its own target
+    const targets = isTracking ? this.findNearestZombies(px, py, angles.length) : []
+
     for (let i = 0; i < angles.length; i++) {
-      const isTracking = effect.flight === 'tracking'
       const id = `proj_${this.projectileIdCounter++}`
+      // Round-robin assign targets: if fewer zombies than bullets, wrap around
+      const target = isTracking && targets.length > 0
+        ? targets[i % targets.length]
+        : undefined
       const proj = new ProjectileEntity({
         id,
         x: px,
@@ -702,7 +709,7 @@ export class BattleManager {
         flight: effect.flight,
         impact: effect.impact,
         angle: angles[i],
-        target: isTracking ? this.findNearestZombie(px, py) : undefined,
+        target,
         maxTurnRate: params.tracking.trackingTurnRate,
         chainBounces: params.chain.chainBounces,
         chainRange: params.chain.chainRange,
@@ -712,7 +719,7 @@ export class BattleManager {
     }
   }
 
-  private findNearestZombie(px: number, py: number): { x: number; y: number; active?: boolean } | undefined {
+  private findNearestZombie(px: number, py: number): ZombieEntity | undefined {
     const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
     let nearest: ZombieEntity | undefined
     let minDist = Infinity
@@ -727,5 +734,22 @@ export class BattleManager {
       }
     }
     return nearest
+  }
+
+  private findNearestZombies(px: number, py: number, count: number): ZombieEntity[] {
+    const zombies = this.entityManager.getByTag('zombie') as ZombieEntity[]
+    const active: { z: ZombieEntity; dist: number }[] = []
+    for (const z of zombies) {
+      if (!z.active) continue
+      const dx = z.x - px
+      const dy = z.y - py
+      active.push({ z, dist: dx * dx + dy * dy })
+    }
+    active.sort((a, b) => a.dist - b.dist)
+    const result: ZombieEntity[] = []
+    for (let i = 0; i < Math.min(count, active.length); i++) {
+      result.push(active[i].z)
+    }
+    return result
   }
 }
