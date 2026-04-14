@@ -25,6 +25,7 @@ export interface ZombieConfig {
 
 /** 波次配置 */
 export interface WaveConfig {
+  readonly zombieType: string  // 僵尸类型 id
   readonly count: number       // 本波僵尸数量
   readonly interval: number    // 生成间隔（毫秒）
 }

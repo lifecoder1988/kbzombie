@@ -9,7 +9,7 @@ const TEST_PLANTS: PlantConfig[] = [
 ]
 
 const TEST_WAVES: WaveConfig[] = [
-  { count: 3, interval: 1000 },
+  { zombieType: 'normal', count: 3, interval: 1000 },
 ]
 
 const TEST_ZOMBIE = { hp: 50, speed: 30, chewDps: 10 }
@@ -19,11 +19,12 @@ function createManager() {
   return new BattleManager({
     plants: TEST_PLANTS,
     waves: TEST_WAVES,
-    zombieConfig: TEST_ZOMBIE,
+    zombieConfigs: { normal: TEST_ZOMBIE },
     letterPool: TEST_LETTERS,
     missedLimit: 2,
     projectileSpeed: 500,
     healAmount: 30,
+    wavePauseDuration: 3000,
     canvasWidth: 1000,
     canvasHeight: 600,
     letterSeed: 42,
@@ -108,12 +109,13 @@ describe('BattleManager', () => {
   it('波次间植物状态保持', () => {
     const mgr = new BattleManager({
       plants: TEST_PLANTS,
-      waves: [{ count: 1, interval: 500 }, { count: 1, interval: 500 }],
-      zombieConfig: TEST_ZOMBIE,
+      waves: [{ zombieType: 'normal', count: 1, interval: 500 }, { zombieType: 'normal', count: 1, interval: 500 }],
+      zombieConfigs: { normal: TEST_ZOMBIE },
       letterPool: TEST_LETTERS,
       missedLimit: 5,
       projectileSpeed: 500,
       healAmount: 30,
+      wavePauseDuration: 3000,
       canvasWidth: 1000,
       canvasHeight: 600,
       letterSeed: 42,

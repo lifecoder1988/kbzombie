@@ -12,9 +12,9 @@ const PLANTS: PlantConfig[] = [
 ]
 const ZOMBIE_CONFIG: ZombieConfig = { hp: 50, speed: 30, chewDps: 10 }
 const WAVES: WaveConfig[] = [
-  { count: 5, interval: 3000 },
-  { count: 7, interval: 2500 },
-  { count: 10, interval: 2000 },
+  { zombieType: 'normal', count: 5, interval: 3000 },
+  { zombieType: 'normal', count: 7, interval: 2500 },
+  { zombieType: 'normal', count: 10, interval: 2000 },
 ]
 const MISSED_LIMIT = 3
 const LETTER_POOL = ['f', 'j', 'd', 'k', 's', 'l', 'a']
@@ -43,11 +43,12 @@ export class BattleScene implements Scene {
     this.manager = new BattleManager({
       plants: PLANTS,
       waves: WAVES,
-      zombieConfig: ZOMBIE_CONFIG,
+      zombieConfigs: { normal: ZOMBIE_CONFIG },
       letterPool: LETTER_POOL,
       missedLimit: MISSED_LIMIT,
       projectileSpeed: PROJECTILE_SPEED,
       healAmount: HEAL_AMOUNT,
+      wavePauseDuration: 3000,
       canvasWidth: this.canvasWidth,
       canvasHeight: this.canvasHeight,
     })

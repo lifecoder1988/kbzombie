@@ -14,17 +14,16 @@ import { ZombieState } from './types'
 export interface BattleConfig {
   readonly plants: readonly PlantConfig[]
   readonly waves: readonly WaveConfig[]
-  readonly zombieConfig: ZombieConfig
+  readonly zombieConfigs: Readonly<Record<string, ZombieConfig>>
   readonly letterPool: readonly string[]
   readonly missedLimit: number
   readonly projectileSpeed: number
   readonly healAmount: number
+  readonly wavePauseDuration: number
   readonly canvasWidth: number
   readonly canvasHeight: number
   readonly letterSeed?: number
 }
-
-const WAVE_PAUSE_DURATION = 3000
 
 export class BattleManager {
   private readonly config: BattleConfig
@@ -184,7 +183,9 @@ export class BattleManager {
   }
 
   private spawnZombie(): void {
-    const { zombieConfig, canvasWidth } = this.config
+    const wave = this.config.waves[this._currentWave]
+    const zombieConfig = this.config.zombieConfigs[wave.zombieType]
+    const { canvasWidth } = this.config
     const id = `zombie_${this.zombieIdCounter++}`
     const spawnX = canvasWidth + 20
     const zombie = new ZombieEntity(id, spawnX, this.laneY, zombieConfig.hp, zombieConfig.speed, zombieConfig.chewDps)
@@ -291,7 +292,7 @@ export class BattleManager {
         this._status = BattleStatus.Victory
       } else {
         this._status = BattleStatus.WavePause
-        this.wavePauseTimer = WAVE_PAUSE_DURATION
+        this.wavePauseTimer = this.config.wavePauseDuration
       }
     }
   }
