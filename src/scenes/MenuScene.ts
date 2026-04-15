@@ -3,7 +3,7 @@ import type { Scene, InputEvent } from '../engine/types'
 import type { StageDef, DifficultyDef } from '../config/types'
 import type { SaveData } from '../game/SaveDataService'
 
-type MenuAction = 'continue' | 'select' | 'difficulty' | 'keyboard'
+type MenuAction = 'continue' | 'select' | 'difficulty' | 'keyboard' | 'reset'
 
 export class MenuScene implements Scene {
   readonly name = 'menu'
@@ -15,6 +15,7 @@ export class MenuScene implements Scene {
   private difficultyOrder: readonly string[] = []
   private canvasWidth = 0
   private canvasHeight = 0
+  private resetConfirm = false
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
@@ -95,6 +96,15 @@ export class MenuScene implements Scene {
 
       // Keyboard toggle
       ctx.fillText(`[K] 键盘提示：${this.saveData.keyboardVisible ? '开启' : '关闭'}`, w / 2, h * 0.80)
+
+      // Reset
+      if (this.resetConfirm) {
+        ctx.fillStyle = '#e94560'
+        ctx.fillText('[R] 确认重置？再按一次 R 清除所有存档', w / 2, h * 0.88)
+      } else {
+        ctx.fillStyle = '#555555'
+        ctx.fillText('[R] 重置存档', w / 2, h * 0.88)
+      }
     }
   }
 
@@ -120,6 +130,19 @@ export class MenuScene implements Scene {
       this.onAction?.('keyboard')
       return
     }
+
+    if (event.key === 'r' || event.key === 'R') {
+      if (this.resetConfirm) {
+        this.resetConfirm = false
+        this.onAction?.('reset')
+      } else {
+        this.resetConfirm = true
+      }
+      return
+    }
+
+    // Any other key cancels reset confirmation
+    this.resetConfirm = false
   }
 
   private isAllCompleted(): boolean {

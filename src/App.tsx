@@ -93,6 +93,9 @@ export default function App() {
         const save = saveService.load()
         saveService.setKeyboardVisible(!save.keyboardVisible)
         refreshMenu()
+      } else if (action === 'reset') {
+        saveService.reset()
+        refreshMenu()
       }
     })
 

@@ -111,6 +111,10 @@ kbzombie/
 - 效果参数（减速比例、灼烧DPS、爆炸半径等）走 `effectParams` 配置，不硬编码在 game/ 中
 - 难度参数（放过上限、速度倍率、段数倍率）走 `difficulty.ts` 配置，`segmentMultiplier` 全局倍率 + `plantSegmentOverrides` 单植物覆盖
 - 结算称号规则走 `settlement.ts` 声明式配置（`TitleRule`），判定逻辑在游戏层 `TitleMatcher`
+- 关卡奖励走 `LevelDef.rewards` 配置（`unlockPlants` + `slotIncrease`），SaveDataService 首次通关时发放
+- Slot 验证用 base `comboSegment`，不受难度 `segmentMultiplier` 影响
+- 植物选择在 PlantSelectScene 完成，App.tsx 通过 `goToPlantSelect` 统一路由，BattleScene 接收 `selectedPlants`
+- 虚拟键盘是 `scenes/VirtualKeyboard.ts` 独立渲染模块，BattleScene 在底部 18% 区域调用
 - 场景间通过 SceneManager 切换，场景不直接持有 SaveDataService，由 App.tsx 注入数据和回调
 - 不引入引擎层不需要的游戏概念（引擎不应出现 zombie、plant 等词）
 - 不提前抽象——需要复用时再抽，不预测未来需求

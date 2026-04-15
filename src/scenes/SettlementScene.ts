@@ -122,7 +122,7 @@ export class SettlementScene implements Scene {
     }
 
     // Button hints
-    const btnY = h * 0.72
+    const btnY = Math.max(rewardsEndY + 30, h * 0.72)
     ctx.font = '20px sans-serif'
     ctx.textAlign = 'center'
     ctx.fillStyle = '#ffffff'

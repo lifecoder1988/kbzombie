@@ -86,8 +86,15 @@ slot 总长度 = 玩家当前 slotSize（初始值 4，通关奖励可增加）
 
 - slotSize 是玩家的**持久化状态**（存在 SaveData 中）
 - 不与具体阶段/关卡硬绑定
-- 关卡通关奖励可包含 slot 值增加（由奖励配置驱动）
+- **关卡奖励配置驱动**：每个关卡可配置 `rewards.slotIncrease`，通关后增加 slotSize
 - 初始 slotSize = 4（只能放一棵 4 段植物）
+
+### 植物选择 UI
+
+- 关卡开始前进入植物选择界面（Canvas 渲染）
+- 玩家从已解锁植物中选取，拖入各路的 slot 槽
+- 每路独立选择，总 comboSegment ≤ slotSize
+- 选择完成后进入战斗，关内不可调整
 
 ---
 

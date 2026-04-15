@@ -237,9 +237,8 @@
 | 5.3 | 指法引导 | 虚拟键盘显示、手指高亮 |
 | 5.4 | 持久化存储 | localStorage 存档读档 |
 | 5.5 | 波次结算界面 | 数据展示、趣味称号 |
-| 5.6 | 成就系统 | 里程碑徽章 |
-| 5.7 | 植物图鉴 | 收集展示所有植物 |
-| 5.8 | 关卡选择界面 | 阶段 / 关卡浏览和选择 |
+| 5.6 | Slot 机制 + 植物选择 UI | 关卡前选植物，slot 长度由关卡奖励驱动 |
+| 5.7 | 关卡选择界面 | 阶段 / 关卡浏览和选择 |
 
 ### 完成标准
 
@@ -248,9 +247,9 @@
 - [x] 每关结束有数据总结（击杀、连击、协同、放过 + 星级 + 趣味称号）
 - [x] 关卡选择界面可浏览已通关/未解锁关卡
 - [x] 难度可全局切换，影响放过上限、僵尸速度、段数长度
-- [ ] 每通关一个阶段正确解锁对应植物
-- [ ] 虚拟键盘正确高亮当前键位和手指
-- [ ] 成就能触发和展示
+- [x] 关卡奖励配置化（解锁植物 + slot 扩展），通关后正确发放
+- [x] Slot 机制：关卡前植物选择 UI，各路独立选择
+- [x] 虚拟键盘正确高亮当前键位和手指
 
 > **5A 组（进度闭环）已完成** — 引擎层 Storage 接口 + 游戏层 SaveDataService / BattleStats / TitleMatcher + 配置层 settlement / difficulty 扩展 + 4 个场景（SettlementScene / StageSelectScene / MenuScene 改造 / BattleScene 改造）+ App.tsx 全场景组装。272 个测试通过。详见 `docs/plans/2026-04-14-stage5a-progress-loop-design.md`（设计）和 `docs/plans/2026-04-14-stage5a-progress-loop-impl.md`（实现计划）。
 >
@@ -263,8 +262,21 @@
 > - 难度三维影响：放过上限 + 僵尸速度倍率 + 段数倍率（支持全局默认 + 单植物覆盖）
 > - 场景流转：MenuScene（继续/选关/难度）→ BattleScene → SettlementScene（继续/重玩/选关）→ StageSelectScene
 > - 进度持久化：localStorage，刷新不丢失
+>
+> **5B 组（解锁 + Slot + 指法引导）已完成** — SaveData v2 迁移 + 关卡奖励配置 + PlantSelectScene + VirtualKeyboard + BattleScene 集成 + App.tsx 全场景流转重构。285 个测试通过。详见 `docs/plans/2026-04-15-stage5b-unlock-slot-keyboard.md`。
+>
+> **实现要点**：
+> - SaveData v2：新增 unlockedPlants / slotSize / keyboardVisible，v1→v2 自动迁移
+> - 关卡奖励配置化：LevelDef.rewards（unlockPlants + slotIncrease），首次通关发放，重打不重复
+> - PlantSelectScene：关卡前选植物，数字键添加、Backspace 删除、↑↓ 切路，validateSlot 校验
+> - VirtualKeyboard：Canvas 渲染，数字+字母 4 行，8 色手指分区，当前字母高亮
+> - BattleScene：底部 18% 区域显示虚拟键盘，gameAreaHeight 分离战场与键盘
+> - 结算/选关界面展示奖励，PLANT_MAP 快速查找
+> - 场景流转：Menu/StageSelect → PlantSelect → Battle → Settlement，全部经过植物选择
 
-**验收原则**：一个孩子可以从零开始，经过多次游玩逐步解锁所有内容。
+> **阶段五已全部完成。**
+
+**验收原则**：一个孩子可以从零开始，经过多次游玩逐步解锁所有内容。 ✅
 
 ---
 
@@ -276,14 +288,18 @@
 
 | # | 模块 | 职责 |
 |---|------|------|
-| 6.1 | 视觉打磨 | 植物/僵尸完整动画、攻击特效、大招特效 |
-| 6.2 | 音效完善 | 不同植物音效、连击递进音效、大招音效 |
-| 6.3 | 难度自适应 | 字母熟练度追踪、智能出题频率 |
-| 6.4 | UI 完善 | 主菜单、设置、难度选择、整体视觉风格统一 |
-| 6.5 | 平衡调整 | 基于实际游玩数据调数值 |
+| 6.1 | 成就系统 | 里程碑徽章触发和展示 |
+| 6.2 | 植物图鉴 | 收集展示所有植物 |
+| 6.3 | 视觉打磨 | 植物/僵尸完整动画、攻击特效、大招特效 |
+| 6.4 | 音效完善 | 不同植物音效、连击递进音效、大招音效 |
+| 6.5 | 难度自适应 | 字母熟练度追踪、智能出题频率 |
+| 6.6 | UI 完善 | 主菜单、设置、难度选择、整体视觉风格统一 |
+| 6.7 | 平衡调整 | 基于实际游玩数据调数值 |
 
 ### 完成标准
 
+- [ ] 成就能触发和展示
+- [ ] 植物图鉴能查看已解锁植物
 - [ ] 视觉风格统一，符合"卡通蠢萌"定位
 - [ ] 打击反馈有手感（音效 + 动画配合）
 - [ ] 难度曲线平滑，不出现断崖
@@ -316,3 +332,4 @@
 | [plans/2026-04-14-stage4-zombie-types.md](./plans/2026-04-14-stage4-zombie-types.md) | 阶段四多种僵尸类型实现计划（4.4 已完成） |
 | [plans/2026-04-14-stage5a-progress-loop-design.md](./plans/2026-04-14-stage5a-progress-loop-design.md) | 阶段五 A 组进度闭环设计文档（已完成） |
 | [plans/2026-04-14-stage5a-progress-loop-impl.md](./plans/2026-04-14-stage5a-progress-loop-impl.md) | 阶段五 A 组进度闭环实现计划（已完成） |
+| [plans/2026-04-15-stage5b-unlock-slot-keyboard.md](./plans/2026-04-15-stage5b-unlock-slot-keyboard.md) | 阶段五 B 组解锁+Slot+虚拟键盘实现计划（已完成） |

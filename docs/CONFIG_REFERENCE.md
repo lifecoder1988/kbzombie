@@ -58,10 +58,13 @@ SaveData {
   completedLevels: string[]     // 已通关关卡 ID 列表（"stageIndex-levelIndex" 格式）
   difficulty: string            // 当前难度 "easy" | "normal" | "hard"
   bestStars: Record<string, number>  // 每关最高星级（key 同 completedLevels 格式，value 1-3）
+  unlockedPlants: string[]      // 已解锁植物 ID 列表（初始 ["peashooter"]）
+  slotSize: number              // 当前 slot 长度（初始 4）
+  keyboardVisible: boolean      // 虚拟键盘显示开关（初始 true）
 }
 ```
 
-> **B 组扩展预留**（未实现）：`unlockedPlants`、`slotSize`、`achievements`、`statistics` 等字段将在 B 组迭代中加入。
+> **后续扩展预留**（未实现）：`achievements`、`statistics` 等字段将在阶段六中加入。
 
 ---
 
@@ -172,7 +175,7 @@ SaveData {
 }
 ```
 
-### 波次配置示例
+### 波次与关卡奖励配置示例
 
 ```json
 {
@@ -197,6 +200,20 @@ SaveData {
               ]
             }
           ]
+        },
+        {
+          "id": 2,
+          "waves": [
+            {
+              "zombies": [
+                { "type": "normal", "count": 15, "spawnInterval": 2000 }
+              ]
+            }
+          ],
+          "rewards": {
+            "unlockPlants": ["snow_pea"],
+            "slotIncrease": 4
+          }
         }
       ]
     }
