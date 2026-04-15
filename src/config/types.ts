@@ -46,12 +46,19 @@ export interface WaveDef {
   readonly zombies?: readonly WaveZombieEntry[]   // 混合出怪
 }
 
+/** 关卡通关奖励 */
+export interface RewardsDef {
+  readonly unlockPlants?: readonly string[]   // 解锁的植物 ID 列表
+  readonly slotIncrease?: number              // slot 长度增加量
+}
+
 /** 关卡配置 */
 export interface LevelDef {
   readonly id: number
   readonly waves: readonly WaveDef[]
   readonly laneCount?: number                           // 路数（默认 1）
   readonly lanePlants?: readonly (readonly string[])[]  // 每路植物 ID，长度 = laneCount
+  readonly rewards?: RewardsDef
 }
 
 /** 阶段配置 */

@@ -14,3 +14,8 @@ export const PLANT_DEFS: readonly PlantDef[] = [
   { id: 'melon_pult',      name: '西瓜投手',  comboSegment: 12, attackPower: 35, hp: 150, element: 'normal',    spread: 'single', flight: 'straight', impact: 'explode' },
   { id: 'starfruit',       name: '星星果',    comboSegment: 12, attackPower: 20, hp: 100, element: 'electric',  spread: 'fan',    flight: 'tracking', impact: 'vanish' },
 ]
+
+/** 按 ID 索引的植物定义 Map */
+export const PLANT_MAP: Readonly<Record<string, PlantDef>> = Object.fromEntries(
+  PLANT_DEFS.map(p => [p.id, p])
+) as Record<string, PlantDef>
