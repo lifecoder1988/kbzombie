@@ -16,6 +16,7 @@ export interface ZombieSpawnParams {
   width?: number
   height?: number
   color?: string
+  type?: string
 }
 
 export class ZombieEntity implements Entity {
@@ -28,6 +29,9 @@ export class ZombieEntity implements Entity {
   layer = RenderLayer.Entity
   tags = ZOMBIE_TAGS
 
+  flashTimer = 0
+  walkPhase = 0
+  private readonly _type: string
   private _state = ZombieState.Walking
   private readonly speed: number
   private readonly chewDps: number
@@ -55,11 +59,15 @@ export class ZombieEntity implements Entity {
     this.width = params.width ?? 40
     this.height = params.height ?? 60
     this.color = params.color ?? '#44cc44'
+    this._type = params.type ?? 'normal'
   }
 
   get state(): ZombieState { return this._state }
   get currentHp(): number { return this._currentHp }
   get zombieColor(): string { return this.color }
+  get zombieType(): string { return this._type }
+  get statuses(): readonly ZombieStatus[] { return this._statuses }
+  get statusCount(): number { return this._statusCount }
 
   applyStatus(status: ZombieStatus): void {
     // Same type → refresh remaining and value
@@ -135,6 +143,13 @@ export class ZombieEntity implements Entity {
 
     const dtSeconds = dt / 1000
 
+    if (this.flashTimer > 0) {
+      this.flashTimer -= dtSeconds
+      if (this.flashTimer < 0) this.flashTimer = 0
+    }
+
+    this.walkPhase += dtSeconds * 6
+
     // 1. Process status timers and apply burn damage (burn damages even stunned zombies)
     let i = 0
     while (i < this._statusCount) {
@@ -182,7 +197,11 @@ export class ZombieEntity implements Entity {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = this._state === ZombieState.Chewing ? '#ff6600' : this.color
+    if (this.flashTimer > 0) {
+      ctx.fillStyle = '#ffffff'
+    } else {
+      ctx.fillStyle = this._state === ZombieState.Chewing ? '#ff6600' : this.color
+    }
     ctx.fillRect(this.x, this.y, this.width, this.height)
     const barWidth = this.width
     const barHeight = 4

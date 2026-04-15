@@ -1,13 +1,21 @@
 import type { Scene, InputEvent } from '../engine/types'
 import type { PlantConfig } from '../game/types'
 import { BattleStatus } from '../game/types'
+import type { GameEvent } from '../game/types'
 import { BattleManager } from '../game/BattleManager'
 import { PlantEntity } from '../game/PlantEntity'
+import { ZombieEntity } from '../game/ZombieEntity'
 import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATTLE_PARAMS, SYNERGY_PARAMS, SETTLEMENT_CONFIG } from '../config'
 import type { BattleStatsData } from '../game/BattleStats'
 import { matchTitle } from '../game/TitleMatcher'
 import { validateConfig } from '../config/validation'
 import { renderVirtualKeyboard } from './VirtualKeyboard'
+import { VfxManager } from './VfxManager'
+import { LetterPop } from './vfx/LetterPop'
+import { FlashPulse } from './vfx/FlashPulse'
+import { ParticleBurst } from './vfx/ParticleBurst'
+import { DeathFlyout } from './vfx/DeathFlyout'
+import { FullScreenFlash } from './vfx/FullScreenFlash'
 
 export class BattleScene implements Scene {
   readonly name = 'battle'
@@ -24,6 +32,7 @@ export class BattleScene implements Scene {
   private keyboardVisible = true
   private gameAreaHeight = 0
   private selectedPlants: readonly (readonly string[])[] | null = null
+  private vfxManager = new VfxManager()
   private battleEnded = false
   private onBattleEnd: ((params: {
     result: 'victory' | 'defeat'
@@ -143,9 +152,11 @@ export class BattleScene implements Scene {
       }
       this.laneEntities.push(entities)
     }
+    this.vfxManager.clear()
   }
 
   exit(): void {
+    this.vfxManager.clear()
     this.manager = null
     this.laneEntities = []
   }
@@ -158,6 +169,12 @@ export class BattleScene implements Scene {
     if (!this.manager || this.paused) return
 
     this.manager.update(dt)
+
+    const events = this.manager.consumeEvents()
+    for (let i = 0; i < events.length; i++) {
+      this.processGameEvent(events[i])
+    }
+    this.vfxManager.update(dt)
 
     if (!this.battleEnded && (this.manager.status === BattleStatus.Victory || this.manager.status === BattleStatus.Defeat)) {
       this.battleEnded = true
@@ -187,12 +204,103 @@ export class BattleScene implements Scene {
       for (let i = 0; i < entities.length; i++) {
         if (i >= plantStates.length) break
         const segments = plantStates[i].config.comboSegment
+        entities[i].update(dt)
         entities[i].syncState(plantStates[i])
         entities[i].letters = chainLetters.slice(segOffset, segOffset + segments) as string[]
         entities[i].typedCount = Math.max(0, Math.min(segments, comboCount - segOffset))
         entities[i].isCurrentTarget = isCurrentLane && comboCount >= segOffset && comboCount < segOffset + segments
         segOffset += segments
       }
+    }
+  }
+
+  private processGameEvent(event: GameEvent): void {
+    switch (event.type) {
+      case 'hit': {
+        const pop = this.vfxManager.acquire('letterPop', () => new LetterPop())
+        pop.init(event.x, event.y, event.letter.toUpperCase(), '#ffd700', 20, 0.3, 2.0)
+        this.vfxManager.spawn(pop)
+        // Plant bounce
+        const laneEnts = this.laneEntities[event.laneIndex]
+        if (laneEnts) {
+          for (let j = 0; j < laneEnts.length; j++) {
+            if (laneEnts[j].isCurrentTarget) {
+              laneEnts[j].bounceTimer = 0.15
+              break
+            }
+          }
+        }
+        break
+      }
+      case 'miss': {
+        this.vfxManager.shake(3, 0.15)
+        if (this.manager) {
+          const lane = this.manager.getLane(event.laneIndex)
+          if (!lane.isEmpty) {
+            const flash = this.vfxManager.acquire('letterPop', () => new LetterPop())
+            flash.init(
+              lane.plantPositions[0], lane.laneY - 10,
+              lane.currentLetter.toUpperCase(), '#ff4444',
+              20, 0.2, 1.0,
+            )
+            this.vfxManager.spawn(flash)
+          }
+        }
+        break
+      }
+      case 'settlement': {
+        const intensity = event.totalPlants > 0 ? event.plantCount / event.totalPlants : 0
+        // Flash pulse
+        const pulse = this.vfxManager.acquire('flashPulse', () => new FlashPulse())
+        const endR = 40 + 80 * intensity
+        const pulseAlpha = 0.2 + 0.3 * intensity
+        const r = 255
+        const g = Math.round(255 - 40 * intensity)
+        const b = Math.round(255 - 255 * intensity)
+        pulse.init(event.x, event.y, 20, endR, pulseAlpha, `rgb(${r},${g},${b})`, 0.3)
+        this.vfxManager.spawn(pulse)
+        // Shake (not for single plant)
+        if (event.plantCount > 1) {
+          this.vfxManager.shake(2 + 6 * intensity, 0.15 + 0.25 * intensity)
+        }
+        // Particles
+        const particleCount = Math.floor(30 * intensity)
+        if (particleCount > 0) {
+          const burst = this.vfxManager.acquire('particleBurst', () => new ParticleBurst())
+          const burstG = Math.round(215 + 40 * (1 - intensity))
+          const burstB = Math.round(255 * (1 - intensity))
+          burst.init(event.x, event.y, particleCount, `rgb(255,${burstG},${burstB})`, 0.5)
+          this.vfxManager.spawn(burst)
+        }
+        // Full chain extra
+        if (event.isFullChain) {
+          const fullFlash = this.vfxManager.acquire('fullScreenFlash', () => new FullScreenFlash())
+          fullFlash.init('#ffd700', 0.3, 0.15)
+          this.vfxManager.spawn(fullFlash)
+        }
+        break
+      }
+      case 'zombieHit': {
+        if (this.manager) {
+          const zombies = this.manager.getEntityManager().getByTag('zombie')
+          for (let j = 0; j < zombies.length; j++) {
+            if (zombies[j].id === event.zombieId) {
+              (zombies[j] as ZombieEntity).flashTimer = 0.1
+              break
+            }
+          }
+        }
+        break
+      }
+      case 'zombieDeath': {
+        const flyout = this.vfxManager.acquire('deathFlyout', () => new DeathFlyout())
+        flyout.init(event.x, event.y, event.width, event.height, event.color)
+        this.vfxManager.spawn(flyout)
+        break
+      }
+      case 'waveStart':
+      case 'waveEnd':
+        break
     }
   }
 
@@ -205,6 +313,10 @@ export class BattleScene implements Scene {
   render(ctx: CanvasRenderingContext2D): void {
     const w = this.canvasWidth
     const h = this.canvasHeight
+
+    const shake = this.vfxManager.getShakeOffset()
+    ctx.save()
+    ctx.translate(shake.x, shake.y)
 
     // Background: green grass
     ctx.fillStyle = '#2d5a1e'
@@ -280,6 +392,9 @@ export class BattleScene implements Scene {
         ctx.fillText(`波次 ${wave} 完成！准备下一波...`, w / 2, h / 2)
       }
     }
+
+    ctx.restore() // end shake translate
+    this.vfxManager.render(ctx)
 
     // Virtual keyboard
     if (this.keyboardVisible && this.manager) {

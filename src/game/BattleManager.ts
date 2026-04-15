@@ -276,6 +276,7 @@ export class BattleManager {
       width: zombieConfig.width,
       height: zombieConfig.height,
       color: zombieConfig.color,
+      type: zombieType,
     })
 
     this.zombieLanes.set(id, laneIdx)
