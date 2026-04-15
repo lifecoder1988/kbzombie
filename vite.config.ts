@@ -8,5 +8,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        // Node.js 25 exposes a native localStorage that overrides jsdom's.
+        // Provide a valid file path so the native API is functional.
+        execArgv: ['--localstorage-file=/tmp/vitest-localstorage.json'],
+      },
+    },
   },
 })
