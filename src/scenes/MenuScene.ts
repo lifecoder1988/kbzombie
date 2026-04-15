@@ -3,7 +3,7 @@ import type { Scene, InputEvent } from '../engine/types'
 import type { StageDef, DifficultyDef } from '../config/types'
 import type { SaveData } from '../game/SaveDataService'
 
-type MenuAction = 'continue' | 'select' | 'difficulty'
+type MenuAction = 'continue' | 'select' | 'difficulty' | 'keyboard'
 
 export class MenuScene implements Scene {
   readonly name = 'menu'
@@ -92,6 +92,9 @@ export class MenuScene implements Scene {
       const diffDef = this.difficulties[diffKey]
       const diffName = diffDef?.displayName ?? diffKey
       ctx.fillText(`[D] 难度：${diffName}`, w / 2, h * 0.72)
+
+      // Keyboard toggle
+      ctx.fillText(`[K] 键盘提示：${this.saveData.keyboardVisible ? '开启' : '关闭'}`, w / 2, h * 0.80)
     }
   }
 
@@ -110,6 +113,11 @@ export class MenuScene implements Scene {
 
     if (event.key === 'd' || event.key === 'D') {
       this.onAction?.('difficulty')
+      return
+    }
+
+    if (event.key === 'k' || event.key === 'K') {
+      this.onAction?.('keyboard')
       return
     }
   }
