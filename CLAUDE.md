@@ -109,6 +109,9 @@ kbzombie/
 - 新增僵尸只需在 `zombies.ts` 加配置（id/name/hp/speed/chewDps/width/height/color），不改 ZombieEntity 代码
 - 波次配置支持 `zombieType`（单类型）或 `zombies` 权重数组（混合出怪），二选一
 - 效果参数（减速比例、灼烧DPS、爆炸半径等）走 `effectParams` 配置，不硬编码在 game/ 中
+- 难度参数（放过上限、速度倍率、段数倍率）走 `difficulty.ts` 配置，`segmentMultiplier` 全局倍率 + `plantSegmentOverrides` 单植物覆盖
+- 结算称号规则走 `settlement.ts` 声明式配置（`TitleRule`），判定逻辑在游戏层 `TitleMatcher`
+- 场景间通过 SceneManager 切换，场景不直接持有 SaveDataService，由 App.tsx 注入数据和回调
 - 不引入引擎层不需要的游戏概念（引擎不应出现 zombie、plant 等词）
 - 不提前抽象——需要复用时再抽，不预测未来需求
 - 不加 TODO 注释标记未来工作——未来工作在 ROADMAP 里跟踪

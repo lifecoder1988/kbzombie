@@ -52,24 +52,16 @@ PlantInstance {
 
 ```
 SaveData {
-  unlockedStage: number         // 已解锁到第几阶段
-  slotSize: number              // 当前 slot 槽长度（初始 4，通关奖励可增加）
-  unlockedPlants: string[]      // 已解锁的植物 ID 列表
-  stageProgress: {              // 每阶段通关进度
-    [stageId]: {
-      completedLevels: number[]
-    }
-  }
-  difficulty: string            // 玩家选择的难度
-  statistics: {                 // 统计数据
-    totalZombiesKilled: number
-    longestCombo: number
-    totalPlayTime: number
-    ...
-  }
-  achievements: string[]        // 已达成的成就
+  version: number               // 存档版本号（当前 1），用于未来数据迁移
+  currentStageIndex: number     // 当前所在阶段索引
+  currentLevelIndex: number     // 当前阶段内关卡索引（0-based）
+  completedLevels: string[]     // 已通关关卡 ID 列表（"stageIndex-levelIndex" 格式）
+  difficulty: string            // 当前难度 "easy" | "normal" | "hard"
+  bestStars: Record<string, number>  // 每关最高星级（key 同 completedLevels 格式，value 1-3）
 }
 ```
+
+> **B 组扩展预留**（未实现）：`unlockedPlants`、`slotSize`、`achievements`、`statistics` 等字段将在 B 组迭代中加入。
 
 ---
 
@@ -210,9 +202,11 @@ SaveData {
     }
   ],
   "difficulty": {
-    "easy": { "missedLimit": 5, "zombieSpeedMultiplier": 0.8 },
-    "normal": { "missedLimit": 3, "zombieSpeedMultiplier": 1.0 },
-    "hard": { "missedLimit": 1, "zombieSpeedMultiplier": 1.2 }
+    "easy":   { "missedLimit": 5, "zombieSpeedMultiplier": 0.8, "segmentMultiplier": 0.75, "displayName": "简单" },
+    "normal": { "missedLimit": 3, "zombieSpeedMultiplier": 1.0, "segmentMultiplier": 1.0,  "displayName": "普通" },
+    "hard":   { "missedLimit": 1, "zombieSpeedMultiplier": 1.2, "segmentMultiplier": 1.5,  "displayName": "困难",
+      "plantSegmentOverrides": { "cattail": 1.2 }
+    }
   }
 }
 ```

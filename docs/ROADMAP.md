@@ -243,12 +243,26 @@
 
 ### 完成标准
 
-- [ ] 从第 1 阶段打到第 5 阶段的完整流程可走通
+- [x] 关闭浏览器重开后进度不丢失
+- [x] 从第 1 阶段打到最后一个阶段的完整流程可走通
+- [x] 每关结束有数据总结（击杀、连击、协同、放过 + 星级 + 趣味称号）
+- [x] 关卡选择界面可浏览已通关/未解锁关卡
+- [x] 难度可全局切换，影响放过上限、僵尸速度、段数长度
 - [ ] 每通关一个阶段正确解锁对应植物
 - [ ] 虚拟键盘正确高亮当前键位和手指
-- [ ] 关闭浏览器重开后进度不丢失
-- [ ] 每波结束有数据总结
 - [ ] 成就能触发和展示
+
+> **5A 组（进度闭环）已完成** — 引擎层 Storage 接口 + 游戏层 SaveDataService / BattleStats / TitleMatcher + 配置层 settlement / difficulty 扩展 + 4 个场景（SettlementScene / StageSelectScene / MenuScene 改造 / BattleScene 改造）+ App.tsx 全场景组装。272 个测试通过。详见 `docs/plans/2026-04-14-stage5a-progress-loop-design.md`（设计）和 `docs/plans/2026-04-14-stage5a-progress-loop-impl.md`（实现计划）。
+>
+> **实现要点**：
+> - 引擎层 Storage 接口（`engine/Storage.ts`），LocalStorage 包装 + 静默降级
+> - SaveDataService：存档读写、严格线性解锁判定、进度推进
+> - BattleStats 统计采集：击杀、连击、协同、放过、满链，集成到 BattleManager 各埋点
+> - 结算配置：声明式称号规则（TitleRule）+ 鼓励语池，TitleMatcher 纯函数匹配
+> - 星级评价：3星（零放过）、2星（≤上限一半）、1星（通关即得）
+> - 难度三维影响：放过上限 + 僵尸速度倍率 + 段数倍率（支持全局默认 + 单植物覆盖）
+> - 场景流转：MenuScene（继续/选关/难度）→ BattleScene → SettlementScene（继续/重玩/选关）→ StageSelectScene
+> - 进度持久化：localStorage，刷新不丢失
 
 **验收原则**：一个孩子可以从零开始，经过多次游玩逐步解锁所有内容。
 
@@ -300,3 +314,5 @@
 | [plans/2026-04-14-effect-synthesis-v2-design.md](./plans/2026-04-14-effect-synthesis-v2-design.md) | 特效合成系统 v2 设计文档（四维正交重构，已完成） |
 | [plans/2026-04-14-effect-synthesis-v2-impl.md](./plans/2026-04-14-effect-synthesis-v2-impl.md) | 特效合成系统 v2 实现计划（已完成） |
 | [plans/2026-04-14-stage4-zombie-types.md](./plans/2026-04-14-stage4-zombie-types.md) | 阶段四多种僵尸类型实现计划（4.4 已完成） |
+| [plans/2026-04-14-stage5a-progress-loop-design.md](./plans/2026-04-14-stage5a-progress-loop-design.md) | 阶段五 A 组进度闭环设计文档（已完成） |
+| [plans/2026-04-14-stage5a-progress-loop-impl.md](./plans/2026-04-14-stage5a-progress-loop-impl.md) | 阶段五 A 组进度闭环实现计划（已完成） |
