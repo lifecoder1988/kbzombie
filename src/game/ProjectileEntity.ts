@@ -4,6 +4,8 @@ import type { Element, Spread, Flight, Impact } from './types'
 
 const PROJECTILE_TAGS: ReadonlySet<string> = new Set(['projectile'])
 
+const MAX_TRAIL = 4
+
 const ELEMENT_COLORS: Record<Element, string> = {
   normal: '#ffd700',
   ice: '#87ceeb',
@@ -70,6 +72,15 @@ export class ProjectileEntity implements Entity {
   private readonly maxBounces: number
   private _needsRedirect = false
 
+  // Trail positions (ring buffer) for non-normal elements
+  private readonly trailPositions: Array<{ x: number; y: number }> = Array.from(
+    { length: MAX_TRAIL },
+    () => ({ x: 0, y: 0 }),
+  )
+  private trailIndex = 0
+  private trailCount = 0
+  private _rotation = 0
+
   constructor(config: ProjectileConfig) {
     this.id = config.id
     this.x = config.x
@@ -109,6 +120,11 @@ export class ProjectileEntity implements Entity {
   get needsRedirect(): boolean {
     return this._needsRedirect
   }
+
+  get trail(): readonly { x: number; y: number }[] { return this.trailPositions }
+  get trailLen(): number { return this.trailCount }
+  get trailIdx(): number { return this.trailIndex }
+  get currentRotation(): number { return this._rotation }
 
   hasHit(zombieId: string): boolean {
     return this.hitSet.has(zombieId)
@@ -166,6 +182,16 @@ export class ProjectileEntity implements Entity {
         this.updateTracking(dtSec)
         break
     }
+
+    // Record trail for non-normal elements
+    if (this.element !== 'normal') {
+      const slot = this.trailPositions[this.trailIndex % MAX_TRAIL]
+      slot.x = this.x
+      slot.y = this.y
+      this.trailIndex++
+      if (this.trailCount < MAX_TRAIL) this.trailCount++
+    }
+    this._rotation += dtSec * 8
 
     // Bounds check
     if (this.x > this.rightBound) {
