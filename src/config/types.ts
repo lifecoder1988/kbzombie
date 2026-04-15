@@ -67,6 +67,7 @@ export interface StageDef {
 export interface DifficultyDef {
   readonly missedLimit: number
   readonly zombieSpeedMultiplier: number
+  readonly displayName: string
 }
 
 /** 效果参数定义 */
@@ -81,6 +82,25 @@ export interface EffectParamsDef {
   readonly electric: { readonly conductRadius: number; readonly conductDamageDecay: number; readonly conductMaxJumps: number }
   readonly stun: { readonly stunDuration: number }
   readonly knockback: { readonly knockbackDistance: number }
+}
+
+/** 称号规则（纯数据，判定逻辑在游戏层） */
+export interface TitleRule {
+  readonly id: string
+  readonly name: string
+  readonly requires: {
+    readonly zeroMissed?: boolean
+    readonly minLongestCombo?: number
+    readonly minSynergyCount?: number
+    readonly minFullChainCount?: number
+  }
+}
+
+/** 结算配置 */
+export interface SettlementConfig {
+  readonly titleRules: readonly TitleRule[]
+  readonly defaultVictoryTitle: string
+  readonly encouragements: readonly string[]
 }
 
 /** 战斗通用参数 */
