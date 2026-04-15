@@ -8,17 +8,17 @@ describe('DeathFlyout', () => {
     expect(df.alive).toBe(true)
   })
 
-  it('dies after 0.5s', () => {
+  it('dies after duration', () => {
     const df = new DeathFlyout()
     df.init(100, 200, 40, 60, '#44cc44')
-    df.update(0.5)
+    df.update(0.7)
     expect(df.alive).toBe(false)
   })
 
   it('reset restores alive', () => {
     const df = new DeathFlyout()
     df.init(100, 200, 40, 60, '#44cc44')
-    df.update(0.5)
+    df.update(0.7)
     expect(df.alive).toBe(false)
     df.reset()
     expect(df.alive).toBe(true)

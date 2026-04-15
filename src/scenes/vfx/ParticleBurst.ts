@@ -46,13 +46,13 @@ export class ParticleBurst implements VfxObject {
     for (let i = 0; i < this.count; i++) {
       const p = this.particles[i]
       const angle = Math.random() * TWO_PI
-      const speed = 50 + Math.random() * 100
+      const speed = 100 + Math.random() * 200
       p.x = x
       p.y = y
       p.vx = Math.cos(angle) * speed
       p.vy = Math.sin(angle) * speed
       p.alpha = 1
-      p.size = 2 + Math.random() * 2
+      p.size = 3 + Math.random() * 3
     }
   }
 

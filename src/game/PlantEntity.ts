@@ -53,7 +53,7 @@ export class PlantEntity implements Entity {
       : 1
 
     const bounceOffsetY = this.bounceTimer > 0
-      ? -6 * Math.sin(this.bounceTimer / 0.15 * Math.PI)
+      ? -12 * Math.sin(this.bounceTimer / 0.2 * Math.PI)
       : 0
 
     // 植物简笔画 — 宽度由 Lane 按段数计算，直接使用

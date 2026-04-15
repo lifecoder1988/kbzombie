@@ -218,15 +218,16 @@ export class BattleScene implements Scene {
   private processGameEvent(event: GameEvent): void {
     switch (event.type) {
       case 'hit': {
+        // 金色字母弹出 — 大字、慢消散、上飘
         const pop = this.vfxManager.acquire('letterPop', () => new LetterPop())
-        pop.init(event.x, event.y, event.letter.toUpperCase(), '#ffd700', 20, 0.3, 2.0)
+        pop.init(event.x, event.y - 20, event.letter.toUpperCase(), '#ffd700', 36, 0.5, 2.5)
         this.vfxManager.spawn(pop)
-        // Plant bounce
+        // 植物弹跳
         const laneEnts = this.laneEntities[event.laneIndex]
         if (laneEnts) {
           for (let j = 0; j < laneEnts.length; j++) {
             if (laneEnts[j].isCurrentTarget) {
-              laneEnts[j].bounceTimer = 0.15
+              laneEnts[j].bounceTimer = 0.2
               break
             }
           }
@@ -234,15 +235,17 @@ export class BattleScene implements Scene {
         break
       }
       case 'miss': {
-        this.vfxManager.shake(3, 0.15)
+        // 屏幕震动 — 更强更久
+        this.vfxManager.shake(6, 0.25)
         if (this.manager) {
           const lane = this.manager.getLane(event.laneIndex)
           if (!lane.isEmpty) {
+            // 红色大字闪烁
             const flash = this.vfxManager.acquire('letterPop', () => new LetterPop())
             flash.init(
-              lane.plantPositions[0], lane.laneY - 10,
+              lane.plantPositions[0], lane.laneY - 20,
               lane.currentLetter.toUpperCase(), '#ff4444',
-              20, 0.2, 1.0,
+              40, 0.35, 1.5,
             )
             this.vfxManager.spawn(flash)
           }
@@ -251,42 +254,42 @@ export class BattleScene implements Scene {
       }
       case 'settlement': {
         const intensity = event.totalPlants > 0 ? event.plantCount / event.totalPlants : 0
-        // Flash pulse
+        // 闪光脉冲 — 更大更亮
         const pulse = this.vfxManager.acquire('flashPulse', () => new FlashPulse())
-        const endR = 40 + 80 * intensity
-        const pulseAlpha = 0.2 + 0.3 * intensity
+        const endR = 80 + 150 * intensity
+        const pulseAlpha = 0.4 + 0.4 * intensity
         const r = 255
         const g = Math.round(255 - 40 * intensity)
         const b = Math.round(255 - 255 * intensity)
-        pulse.init(event.x, event.y, 20, endR, pulseAlpha, `rgb(${r},${g},${b})`, 0.3)
+        pulse.init(event.x, event.y, 30, endR, pulseAlpha, `rgb(${r},${g},${b})`, 0.4)
         this.vfxManager.spawn(pulse)
-        // Shake (not for single plant)
-        if (event.plantCount > 1) {
-          this.vfxManager.shake(2 + 6 * intensity, 0.15 + 0.25 * intensity)
-        }
-        // Particles
-        const particleCount = Math.floor(30 * intensity)
-        if (particleCount > 0) {
-          const burst = this.vfxManager.acquire('particleBurst', () => new ParticleBurst())
-          const burstG = Math.round(215 + 40 * (1 - intensity))
-          const burstB = Math.round(255 * (1 - intensity))
-          burst.init(event.x, event.y, particleCount, `rgb(255,${burstG},${burstB})`, 0.5)
-          this.vfxManager.spawn(burst)
-        }
-        // Full chain extra
+        // 屏幕震动 — 单棵也轻震，满链强震
+        const shakeIntensity = 3 + 10 * intensity
+        const shakeDuration = 0.2 + 0.3 * intensity
+        this.vfxManager.shake(shakeIntensity, shakeDuration)
+        // 粒子爆发 — 数量翻倍、速度更快
+        const particleCount = Math.max(5, Math.floor(30 * intensity))
+        const burst = this.vfxManager.acquire('particleBurst', () => new ParticleBurst())
+        const burstG = Math.round(215 + 40 * (1 - intensity))
+        const burstB = Math.round(255 * (1 - intensity))
+        burst.init(event.x, event.y, particleCount, `rgb(255,${burstG},${burstB})`, 0.7)
+        this.vfxManager.spawn(burst)
+        // 满链大招 — 更亮更久
         if (event.isFullChain) {
           const fullFlash = this.vfxManager.acquire('fullScreenFlash', () => new FullScreenFlash())
-          fullFlash.init('#ffd700', 0.3, 0.15)
+          fullFlash.init('#ffd700', 0.5, 0.3)
           this.vfxManager.spawn(fullFlash)
+          this.vfxManager.shake(14, 0.5)
         }
         break
       }
       case 'zombieHit': {
+        // 僵尸闪白 — 更久
         if (this.manager) {
           const zombies = this.manager.getEntityManager().getByTag('zombie')
           for (let j = 0; j < zombies.length; j++) {
             if (zombies[j].id === event.zombieId) {
-              (zombies[j] as ZombieEntity).flashTimer = 0.1
+              (zombies[j] as ZombieEntity).flashTimer = 0.15
               break
             }
           }
@@ -294,9 +297,14 @@ export class BattleScene implements Scene {
         break
       }
       case 'zombieDeath': {
+        // 死亡残影 + 额外粒子碎片
         const flyout = this.vfxManager.acquire('deathFlyout', () => new DeathFlyout())
         flyout.init(event.x, event.y, event.width, event.height, event.color)
         this.vfxManager.spawn(flyout)
+        // 碎片粒子
+        const debris = this.vfxManager.acquire('particleBurst', () => new ParticleBurst())
+        debris.init(event.x + event.width / 2, event.y + event.height / 2, 12, event.color, 0.6)
+        this.vfxManager.spawn(debris)
         break
       }
       case 'waveStart':

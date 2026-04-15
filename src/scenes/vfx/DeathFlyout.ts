@@ -1,9 +1,9 @@
 import type { VfxObject } from '../VfxManager'
 
-const DURATION = 0.5
-const VX = 150        // px/s rightward
-const VY = -100       // px/s upward
-const ROTATION_SPEED = 4  // rad/s
+const DURATION = 0.6
+const VX = 250        // px/s rightward
+const VY = -180       // px/s upward
+const ROTATION_SPEED = 8  // rad/s
 
 export class DeathFlyout implements VfxObject {
   alive = true
