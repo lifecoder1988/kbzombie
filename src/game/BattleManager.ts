@@ -8,6 +8,8 @@ import { IGNORED_KEYS } from './InputHandler'
 import { ZombieEntity } from './ZombieEntity'
 import { ProjectileEntity } from './ProjectileEntity'
 import { ZombieState } from './types'
+import { BattleStats } from './BattleStats'
+import type { BattleStatsData } from './BattleStats'
 
 export interface EffectParams {
   readonly burst: { readonly burstCount: number; readonly burstInterval: number }
@@ -65,6 +67,7 @@ export class BattleManager {
   private zombieIdCounter = 0
   private projectileIdCounter = 0
   private _pendingProjectiles = 0
+  private readonly stats = new BattleStats()
 
   constructor(config: BattleConfig) {
     this.config = config
@@ -140,6 +143,10 @@ export class BattleManager {
   get laneCount(): number { return this.lanes.length }
 
   getLane(index: number): Lane { return this.lanes[index] }
+
+  getStats(): BattleStatsData {
+    return this.stats.getStats()
+  }
 
   getChainLetters(laneIndex?: number): readonly string[] {
     const idx = laneIndex ?? this.currentLaneIndex ?? 0
@@ -366,6 +373,7 @@ export class BattleManager {
 
           if (!z.active) {
             this.processedInWave++
+            this.stats.recordKill()
           }
 
           // Handle impact type
@@ -462,6 +470,7 @@ export class BattleManager {
           nextTargets.push(nearest)
           if (!nearest.active) {
             this.processedInWave++
+            this.stats.recordKill()
           }
         }
       }
@@ -487,6 +496,7 @@ export class BattleManager {
         this.applyElementEffect(element, z, params)
         if (!z.active) {
           this.processedInWave++
+          this.stats.recordKill()
         }
       }
     }
@@ -517,6 +527,7 @@ export class BattleManager {
       const z = zombies[i]
       if (z.active && z.x + z.width < 0) {
         this._missedCount++
+        this.stats.recordMiss()
         this.processedInWave++
         this.zombieLanes.delete(z.id)
         this.entityManager.remove(z)
@@ -633,6 +644,14 @@ export class BattleManager {
     const lane = this.lanes[laneIndex]
     const plants = lane.getPlantStates()
     const result = calculateSettlement(plants, comboCount, isFullChain, this.config.synergyMultiplier)
+
+    this.stats.recordCombo(comboCount)
+    if (result.aliveActivatedIndices.length >= 2) {
+      this.stats.recordSynergy()
+    }
+    if (isFullChain) {
+      this.stats.recordFullChain()
+    }
 
     const { synthesizedEffect, perPlantPower, aliveActivatedIndices } = result
     const params = this.config.effectParams

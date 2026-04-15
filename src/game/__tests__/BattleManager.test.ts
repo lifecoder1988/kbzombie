@@ -233,6 +233,37 @@ describe('BattleManager', () => {
     const damagedCount = zombies.filter(z => z.currentHp < 200).length
     expect(damagedCount).toBeGreaterThanOrEqual(2)
   })
+
+  it('统计：僵尸被杀记录 zombiesKilled', () => {
+    const weakZombie = { hp: 1, speed: 30, chewDps: 10, width: 40, height: 60, color: '#44cc44' }
+    const mgr = createManager({
+      waves: [{ zombieType: 'weak', count: 1, interval: 100 }],
+      zombieConfigs: { weak: weakZombie },
+    })
+    mgr.update(200) // spawn zombie
+    mgr.update(16)  // flush entity manager
+    expect(mgr.getZombies().length).toBe(1)
+    // Fire a projectile with high power to kill the zombie
+    for (let i = 0; i < 4; i++) {
+      const letter = mgr.currentLane !== null ? mgr.currentLetter : mgr.getLane(0).currentLetter
+      mgr.onKeyDown(letter)
+    }
+    mgr.onKeyDown(' ')
+    // Advance until projectile hits zombie
+    for (let i = 0; i < 200; i++) mgr.update(16)
+    expect(mgr.getStats().zombiesKilled).toBeGreaterThanOrEqual(1)
+  })
+
+  it('统计：结算时记录 longestCombo 和 totalCombo', () => {
+    const mgr = createManager()
+    const lane = mgr.getLane(0)
+    const firstLetter = lane.currentLetter
+    mgr.onKeyDown(firstLetter)
+    mgr.onKeyDown(' ')
+    const stats = mgr.getStats()
+    expect(stats.totalCombo).toBe(1)
+    expect(stats.longestCombo).toBe(1)
+  })
 })
 
 describe('混合出怪', () => {
