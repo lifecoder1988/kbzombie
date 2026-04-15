@@ -9,6 +9,9 @@ export interface SettlementSceneParams {
   title: string               // title (victory) or encouragement (defeat)
   stageIndex: number
   levelIndex: number
+  rewards?: { unlockPlants?: readonly string[]; slotIncrease?: number }
+  isFirstCompletion?: boolean
+  plantNames?: Readonly<Record<string, string>>
 }
 
 type SettlementAction = 'continue' | 'replay' | 'select'
@@ -88,6 +91,34 @@ export class SettlementScene implements Scene {
       ctx.fillStyle = '#ffffff'
       ctx.textAlign = 'left'
       ctx.fillText(String(labels[i].value), w / 2 + 20, y)
+    }
+
+    // Rewards section (victory + first completion + has rewards)
+    let rewardsEndY = dataStartY + labels.length * lineHeight
+    if (result === 'victory' && this.params.isFirstCompletion && this.params.rewards) {
+      const rewards = this.params.rewards
+      rewardsEndY += 20
+
+      ctx.fillStyle = '#ffd700'
+      ctx.font = 'bold 20px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('— 通关奖励 —', w / 2, rewardsEndY)
+      rewardsEndY += 30
+
+      ctx.font = '20px sans-serif'
+      if (rewards.unlockPlants && rewards.unlockPlants.length > 0) {
+        for (const plantId of rewards.unlockPlants) {
+          const name = this.params.plantNames?.[plantId] ?? plantId
+          ctx.fillStyle = '#69DB7C'
+          ctx.fillText(`解锁植物：${name}`, w / 2, rewardsEndY)
+          rewardsEndY += 28
+        }
+      }
+      if (rewards.slotIncrease) {
+        ctx.fillStyle = '#4DABF7'
+        ctx.fillText(`阵地扩展 +${rewards.slotIncrease}`, w / 2, rewardsEndY)
+        rewardsEndY += 28
+      }
     }
 
     // Button hints
