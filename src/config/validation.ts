@@ -66,6 +66,19 @@ export function validateConfig(
           }
         }
       }
+      // Validate rewards
+      if (level.rewards) {
+        if (level.rewards.unlockPlants) {
+          for (const plantId of level.rewards.unlockPlants) {
+            if (!plantIds.has(plantId)) {
+              errors.push(`阶段 ${stage.id} 关卡 ${level.id} rewards.unlockPlants 引用不存在的植物: "${plantId}"`)
+            }
+          }
+        }
+        if (level.rewards.slotIncrease !== undefined && level.rewards.slotIncrease <= 0) {
+          errors.push(`阶段 ${stage.id} 关卡 ${level.id} rewards.slotIncrease 必须 > 0，当前: ${level.rewards.slotIncrease}`)
+        }
+      }
       for (const wave of level.waves) {
         if (wave.count <= 0) {
           errors.push(`阶段 ${stage.id} 关卡 ${level.id} 波次 count 必须 > 0，当前: ${wave.count}`)

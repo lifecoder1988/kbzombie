@@ -239,6 +239,48 @@ describe('validateConfig', () => {
   })
 })
 
+describe('rewards validation', () => {
+  it('rewards.unlockPlants 引用不存在的植物报错', () => {
+    const stages: StageDef[] = [{
+      id: 1, name: 'test', letters: ['f'], plants: ['p1'],
+      levels: [{
+        id: 1,
+        waves: [{ count: 1, interval: 1000, zombieType: 'normal' }],
+        rewards: { unlockPlants: ['nonexistent_plant'] },
+      }],
+    }]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('nonexistent_plant'))).toBe(true)
+  })
+
+  it('rewards.slotIncrease <= 0 报错', () => {
+    const stages: StageDef[] = [{
+      id: 1, name: 'test', letters: ['f'], plants: ['p1'],
+      levels: [{
+        id: 1,
+        waves: [{ count: 1, interval: 1000, zombieType: 'normal' }],
+        rewards: { slotIncrease: 0 },
+      }],
+    }]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('slotIncrease'))).toBe(true)
+  })
+
+  it('合法 rewards 不报错', () => {
+    const stages: StageDef[] = [{
+      id: 1, name: 'test', letters: ['f'], plants: ['p1'],
+      levels: [{
+        id: 1,
+        waves: [{ count: 1, interval: 1000, zombieType: 'normal' }],
+        rewards: { unlockPlants: ['p1'], slotIncrease: 4 },
+      }],
+    }]
+    const errors = validateConfig(validPlants, validZombies, stages, validSynergy, validBattle)
+    expect(errors.some(e => e.includes('rewards'))).toBe(false)
+    expect(errors.some(e => e.includes('slotIncrease'))).toBe(false)
+  })
+})
+
 describe('laneCount 校验', () => {
   const makeStageWithLevel = (levelOverride: object): StageDef[] => [
     {
