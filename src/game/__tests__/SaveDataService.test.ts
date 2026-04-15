@@ -21,7 +21,7 @@ describe('SaveDataService', () => {
 
   it('首次 load 返回默认存档', () => {
     const data = service.load()
-    expect(data.version).toBe(1)
+    expect(data.version).toBe(2)
     expect(data.currentStageIndex).toBe(0)
     expect(data.currentLevelIndex).toBe(0)
     expect(data.completedLevels).toEqual([])
@@ -98,5 +98,61 @@ describe('SaveDataService', () => {
 
   it('isAllCompleted 未全部通关返回 false', () => {
     expect(service.isAllCompleted()).toBe(false)
+  })
+
+  it('首次 load 返回 v2 默认存档（含 unlockedPlants/slotSize/keyboardVisible）', () => {
+    const data = service.load()
+    expect(data.version).toBe(2)
+    expect(data.unlockedPlants).toEqual(['peashooter'])
+    expect(data.slotSize).toBe(4)
+    expect(data.keyboardVisible).toBe(true)
+  })
+
+  it('v1 存档 load 时自动迁移到 v2', () => {
+    storage.save('kbzombie_save', {
+      version: 1,
+      currentStageIndex: 2,
+      currentLevelIndex: 1,
+      completedLevels: ['0-0', '0-1', '1-0'],
+      difficulty: 'hard',
+      bestStars: { '0-0': 3, '0-1': 2, '1-0': 1 },
+    })
+
+    const data = service.load()
+    expect(data.version).toBe(2)
+    expect(data.unlockedPlants).toEqual(['peashooter'])
+    expect(data.slotSize).toBe(4)
+    expect(data.keyboardVisible).toBe(true)
+    expect(data.currentStageIndex).toBe(2)
+    expect(data.currentLevelIndex).toBe(1)
+    expect(data.completedLevels).toEqual(['0-0', '0-1', '1-0'])
+    expect(data.difficulty).toBe('hard')
+    expect(data.bestStars).toEqual({ '0-0': 3, '0-1': 2, '1-0': 1 })
+  })
+
+  it('v1→v2 迁移后再次 load 不重复迁移', () => {
+    storage.save('kbzombie_save', {
+      version: 1,
+      currentStageIndex: 0,
+      currentLevelIndex: 0,
+      completedLevels: [],
+      difficulty: 'normal',
+      bestStars: {},
+    })
+
+    service.load()
+    const data = service.load()
+    expect(data.version).toBe(2)
+    expect(data.unlockedPlants).toEqual(['peashooter'])
+  })
+
+  it('reset 恢复 v2 默认值', () => {
+    service.completeLevel(0, 0, 3, 2, true)
+    service.reset()
+    const data = service.load()
+    expect(data.version).toBe(2)
+    expect(data.unlockedPlants).toEqual(['peashooter'])
+    expect(data.slotSize).toBe(4)
+    expect(data.keyboardVisible).toBe(true)
   })
 })

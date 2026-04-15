@@ -7,17 +7,23 @@ export interface SaveData {
   completedLevels: string[]
   difficulty: string
   bestStars: Record<string, number>
+  unlockedPlants: string[]
+  slotSize: number
+  keyboardVisible: boolean
 }
 
 const SAVE_KEY = 'kbzombie_save'
 
 const DEFAULT_SAVE: SaveData = {
-  version: 1,
+  version: 2,
   currentStageIndex: 0,
   currentLevelIndex: 0,
   completedLevels: [],
   difficulty: 'normal',
   bestStars: {},
+  unlockedPlants: ['peashooter'],
+  slotSize: 4,
+  keyboardVisible: true,
 }
 
 export class SaveDataService {
@@ -29,7 +35,17 @@ export class SaveDataService {
 
   load(): SaveData {
     const data = this.storage.load<SaveData>(SAVE_KEY)
-    if (!data) return { ...DEFAULT_SAVE, completedLevels: [], bestStars: {} }
+    if (!data) return { ...DEFAULT_SAVE, completedLevels: [], bestStars: {}, unlockedPlants: ['peashooter'] }
+
+    // v1 → v2 migration
+    if (data.version < 2) {
+      data.version = 2
+      if (!data.unlockedPlants) data.unlockedPlants = ['peashooter']
+      if (!data.slotSize) data.slotSize = 4
+      if (data.keyboardVisible === undefined) data.keyboardVisible = true
+      this.save(data)
+    }
+
     return data
   }
 
@@ -90,6 +106,6 @@ export class SaveDataService {
   }
 
   reset(): void {
-    this.save({ ...DEFAULT_SAVE, completedLevels: [], bestStars: {} })
+    this.save({ ...DEFAULT_SAVE, completedLevels: [], bestStars: {}, unlockedPlants: ['peashooter'] })
   }
 }
