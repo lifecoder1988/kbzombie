@@ -11,6 +11,7 @@ export class StageSelectScene implements Scene {
   private onAction: ((action: SelectAction, stageIndex: number, levelIndex: number) => void) | null = null
   private stages: readonly StageDef[] = []
   private saveData: SaveData | null = null
+  private plantNames: Readonly<Record<string, string>> = {}
   private canvasWidth = 0
   private canvasHeight = 0
   private cursorStage = 0
@@ -24,9 +25,10 @@ export class StageSelectScene implements Scene {
     this.onAction = fn
   }
 
-  setData(stages: readonly StageDef[], saveData: SaveData): void {
+  setData(stages: readonly StageDef[], saveData: SaveData, plantNames?: Readonly<Record<string, string>>): void {
     this.stages = stages
     this.saveData = saveData
+    this.plantNames = plantNames ?? {}
     this.cursorStage = saveData.currentStageIndex
     this.cursorLevel = saveData.currentLevelIndex
   }
@@ -140,6 +142,27 @@ export class StageSelectScene implements Scene {
           ctx.fillText('\u25CB', 80, y)
           ctx.fillStyle = '#ffffff'
           ctx.fillText(`\u5173\u5361 ${li + 1}`, 160, y)
+        }
+
+        // Reward hints
+        const level = stage.levels[li]
+        if (level.rewards) {
+          const rewardTexts: string[] = []
+          if (level.rewards.unlockPlants) {
+            for (const pid of level.rewards.unlockPlants) {
+              rewardTexts.push(this.plantNames[pid] ?? pid)
+            }
+          }
+          if (level.rewards.slotIncrease) {
+            rewardTexts.push(`\u9635\u5730+${level.rewards.slotIncrease}`)
+          }
+          if (rewardTexts.length > 0) {
+            ctx.fillStyle = completed ? '#555555' : '#ffd700'
+            ctx.font = '14px sans-serif'
+            const prefix = completed ? '\u2713 ' : '\uD83C\uDF81 '
+            ctx.fillText(`${prefix}${rewardTexts.join(', ')}`, 260, y)
+            ctx.font = '18px sans-serif' // restore
+          }
         }
 
         y += levelHeight
