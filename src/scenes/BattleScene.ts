@@ -7,6 +7,7 @@ import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATT
 import type { BattleStatsData } from '../game/BattleStats'
 import { matchTitle } from '../game/TitleMatcher'
 import { validateConfig } from '../config/validation'
+import { renderVirtualKeyboard } from './VirtualKeyboard'
 
 export class BattleScene implements Scene {
   readonly name = 'battle'
@@ -20,6 +21,9 @@ export class BattleScene implements Scene {
   private stageIndex = 0
   private levelIndex = 0
   private difficultyKey = 'normal'
+  private keyboardVisible = true
+  private gameAreaHeight = 0
+  private selectedPlants: readonly (readonly string[])[] | null = null
   private battleEnded = false
   private onBattleEnd: ((params: {
     result: 'victory' | 'defeat'
@@ -43,15 +47,24 @@ export class BattleScene implements Scene {
     }
   }
 
-  setLevel(stageIndex: number, levelIndex: number, difficultyKey?: string): void {
+  setLevel(
+    stageIndex: number,
+    levelIndex: number,
+    difficultyKey?: string,
+    selectedPlants?: readonly (readonly string[])[],
+    keyboardVisible?: boolean,
+  ): void {
     this.stageIndex = stageIndex
     this.levelIndex = levelIndex
     if (difficultyKey !== undefined) this.difficultyKey = difficultyKey
+    this.selectedPlants = selectedPlants ?? null
+    this.keyboardVisible = keyboardVisible ?? true
   }
 
   enter(): void {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
+    this.gameAreaHeight = this.keyboardVisible ? Math.floor(this.canvasHeight * 0.82) : this.canvasHeight
     this.paused = false
     this.battleEnded = false
 
@@ -80,7 +93,7 @@ export class BattleScene implements Scene {
     // Build per-lane PlantConfig arrays
     const lanePlants: PlantConfig[][] = []
     for (let i = 0; i < laneCount; i++) {
-      const ids = level.lanePlants?.[i] ?? stage.plants
+      const ids = this.selectedPlants?.[i] ?? level.lanePlants?.[i] ?? stage.plants
       lanePlants.push(resolvePlants(ids))
     }
 
@@ -108,7 +121,7 @@ export class BattleScene implements Scene {
       healAmount: BATTLE_PARAMS.healAmount,
       wavePauseDuration: BATTLE_PARAMS.wavePauseDuration,
       canvasWidth: this.canvasWidth,
-      canvasHeight: this.canvasHeight,
+      canvasHeight: this.gameAreaHeight,
       synergyMultiplier: SYNERGY_PARAMS.multiplier,
       effectParams: BATTLE_PARAMS.effectParams,
     })
@@ -140,6 +153,7 @@ export class BattleScene implements Scene {
   update(dt: number): void {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
+    this.gameAreaHeight = this.keyboardVisible ? Math.floor(this.canvasHeight * 0.82) : this.canvasHeight
 
     if (!this.manager || this.paused) return
 
@@ -265,6 +279,27 @@ export class BattleScene implements Scene {
         ctx.font = 'bold 24px sans-serif'
         ctx.fillText(`波次 ${wave} 完成！准备下一波...`, w / 2, h / 2)
       }
+    }
+
+    // Virtual keyboard
+    if (this.keyboardVisible && this.manager) {
+      const kbY = this.gameAreaHeight
+      const kbH = this.canvasHeight - this.gameAreaHeight
+
+      const highlightKeys: string[] = []
+      const status = this.manager.status
+      if (status === BattleStatus.Fighting) {
+        if (this.manager.currentLetter) {
+          highlightKeys.push(this.manager.currentLetter)
+        } else {
+          for (let li = 0; li < this.manager.laneCount; li++) {
+            const lane = this.manager.getLane(li)
+            if (!lane.isEmpty) highlightKeys.push(lane.currentLetter)
+          }
+        }
+      }
+
+      renderVirtualKeyboard(ctx, 0, kbY, w, kbH, highlightKeys)
     }
 
     // Pause overlay
