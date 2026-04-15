@@ -20,8 +20,8 @@ export class Lane {
     plants: readonly PlantConfig[],
     letterPool: readonly string[],
     laneY: number,
-    canvasWidth: number,
-    maxTotalSegments: number,
+    _canvasWidth: number,
+    _maxTotalSegments: number,
     letterSeed?: number,
   ) {
     this.index = index
@@ -34,20 +34,17 @@ export class Lane {
     const totalSeg = plants.reduce((s, p) => s + p.comboSegment, 0)
     this._chainLetters = Array.from({ length: totalSeg }, () => this.letterProvider.next())
 
-    // Plant layout: width per segment is global (based on maxTotalSegments across all lanes)
-    const plantAreaWidth = canvasWidth * 0.35
-    const refSegments = maxTotalSegments > 0 ? maxTotalSegments : Math.max(totalSeg, 1)
-    const maxGap = 8
-    const widthPerSegment = (plantAreaWidth - maxGap * Math.max(0, plants.length - 1)) / refSegments
+    // Plant layout: width = 20 + segments * 12, left-aligned with gaps
+    const gap = 8
     const startX = 20
     this.plantPositions = []
     this.plantWidths = []
     let curX = startX
     for (let i = 0; i < plants.length; i++) {
-      const w = Math.round(plants[i].comboSegment * widthPerSegment)
+      const w = 20 + plants[i].comboSegment * 12
       this.plantPositions.push(curX)
       this.plantWidths.push(w)
-      curX += w + maxGap
+      curX += w + gap
     }
   }
 

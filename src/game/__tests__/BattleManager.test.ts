@@ -467,9 +467,9 @@ describe('复活植物后僵尸不回头', () => {
     const plantRightEdge = lane.plantPositions[0] + lane.plantWidths[0]
 
     // Walk zombie to plant, kill it, then walk a bit further left (but not off screen)
-    // Distance from spawn (2020) to plant right edge (~800): ~1220px at 20px/s = ~61s
-    // Total 80s simulation: zombie reaches ~2020-20*80=420, plant killed, still on screen
-    for (let i = 0; i < 800; i++) mgr.update(100)
+    // Plant right edge = 20 + (20+4*12) = 88px; spawn at ~2020; distance ~1932px at 20px/s = ~97s
+    // Simulate 99s: zombie at ~2020-20*99 = 40px, past plant (88) but still on screen (40+40 > 0)
+    for (let i = 0; i < 990; i++) mgr.update(100)
 
     const zombies = mgr.getZombies()
     expect(zombies.length).toBe(1) // zombie should still be on screen

@@ -56,40 +56,37 @@ export class PlantEntity implements Entity {
       ? -6 * Math.sin(this.bounceTimer / 0.15 * Math.PI)
       : 0
 
-    // 植物简笔画 — 大小随段数伸缩，居中在分配宽度内
+    // 植物简笔画 — 宽度由 Lane 按段数计算，直接使用
     const baseColor = PLANT_COLORS[this.plantIndex % PLANT_COLORS.length]
-    const segments = this.plantState?.config.comboSegment ?? 1
-    const plantBodyW = Math.min(20 + segments * 12, this.width)
-    const plantBodyX = this.x + (this.width - plantBodyW) / 2
-    drawPlant(ctx, plantBodyX, this.y, plantBodyW, this.height, baseColor, alive, bounceOffsetY)
+    drawPlant(ctx, this.x, this.y, this.width, this.height, baseColor, alive, bounceOffsetY)
 
-    // 当前目标高亮边框（包围固定大小的植物体）
+    // 当前目标高亮边框
     if (this.isCurrentTarget && alive) {
       ctx.globalAlpha = 1.0
       ctx.strokeStyle = '#ffd700'
       ctx.lineWidth = 3
-      ctx.strokeRect(plantBodyX - 2, this.y + bounceOffsetY - 2, plantBodyW + 4, this.height + 4)
+      ctx.strokeRect(this.x - 2, this.y + bounceOffsetY - 2, this.width + 4, this.height + 4)
     }
 
-    // 血条（残血时显示，跟随植物体宽度）
+    // 血条（残血时显示）
     if (alive && hpRatio < 1) {
       ctx.globalAlpha = 1.0
       const barHeight = 4
       const barY = this.y + bounceOffsetY + this.height + 4
       ctx.fillStyle = '#333'
-      ctx.fillRect(plantBodyX, barY, plantBodyW, barHeight)
+      ctx.fillRect(this.x, barY, this.width, barHeight)
       ctx.fillStyle = '#22cc22'
-      ctx.fillRect(plantBodyX, barY, plantBodyW * hpRatio, barHeight)
+      ctx.fillRect(this.x, barY, this.width * hpRatio, barHeight)
     }
 
     ctx.globalAlpha = 1.0
 
-    // 植物名称（居中在植物体上）
+    // 植物名称
     ctx.fillStyle = '#ffffff'
     ctx.font = 'bold 12px sans-serif'
     ctx.textAlign = 'center'
     const name = this.plantState?.config.name ?? ''
-    ctx.fillText(name, plantBodyX + plantBodyW / 2, this.y + bounceOffsetY + this.height / 2 + 5)
+    ctx.fillText(name, this.x + this.width / 2, this.y + bounceOffsetY + this.height / 2 + 5)
 
     // 字母序列显示在植物上方
     if (this.letters.length > 0) {
