@@ -16,7 +16,7 @@ kbzombie/
 │   ├── engine/            # 游戏引擎层（Game Loop、场景、实体、渲染、输入、音效、碰撞检测）
 │   ├── game/              # 游戏逻辑层（战斗、连击、植物、僵尸、结算）
 │   ├── config/            # 策略配置（植物、僵尸、关卡、波次、难度、战斗参数、校验）
-│   ├── scenes/            # 各场景实现（主菜单、战斗、结算等）
+│   ├── scenes/            # 各场景实现（主菜单、战斗、结算等）+ renderers/ + vfx/
 │   ├── ui/                # React UI 组件（非 Canvas 部分）
 │   └── assets/            # 图片、音效资源
 ├── public/
@@ -116,6 +116,12 @@ kbzombie/
 - 植物选择在 PlantSelectScene 完成，App.tsx 通过 `goToPlantSelect` 统一路由，BattleScene 接收 `selectedPlants`
 - 虚拟键盘是 `scenes/VirtualKeyboard.ts` 独立渲染模块，BattleScene 在底部 18% 区域调用
 - 场景间通过 SceneManager 切换，场景不直接持有 SaveDataService，由 App.tsx 注入数据和回调
+- 游戏逻辑使用固定 1280×720 逻辑尺寸，BattleScene 用 `ctx.scale()` 适配窗口，窗口大小不影响难度
+- 植物布局宽度 = `20 + segments × 12`，左对齐紧密排列，视觉与碰撞一致
+- 实体渲染委托给 `scenes/renderers/` 下的纯函数（PlantRenderer、ZombieRenderer、ProjectileRenderer、BattlefieldRenderer）
+- 新增植物视觉：在 `PlantRenderer.ts` 中添加对应 plantId 的绘制分支，同时在 `PLANT_THEME` 中添加专属颜色
+- VFX 效果走 `scenes/VfxManager.ts`（对象池复用），效果类在 `scenes/vfx/` 下，实体内仅保留极简 timer（bounceTimer、flashTimer、walkPhase）
+- BattleManager 通过 `GameEvent` 队列通知视觉层，BattleScene 每帧 `consumeEvents()` 消费并生成 VFX
 - 不引入引擎层不需要的游戏概念（引擎不应出现 zombie、plant 等词）
 - 不提前抽象——需要复用时再抽，不预测未来需求
 - 不加 TODO 注释标记未来工作——未来工作在 ROADMAP 里跟踪
