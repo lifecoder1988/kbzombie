@@ -3,7 +3,9 @@ import type { PlantConfig } from '../game/types'
 import { BattleStatus } from '../game/types'
 import { BattleManager } from '../game/BattleManager'
 import { PlantEntity } from '../game/PlantEntity'
-import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATTLE_PARAMS, SYNERGY_PARAMS } from '../config'
+import { PLANT_DEFS, ZOMBIE_DEFS, STAGES, DIFFICULTIES, DEFAULT_DIFFICULTY, BATTLE_PARAMS, SYNERGY_PARAMS, SETTLEMENT_CONFIG } from '../config'
+import type { BattleStatsData } from '../game/BattleStats'
+import { matchTitle } from '../game/TitleMatcher'
 import { validateConfig } from '../config/validation'
 
 export class BattleScene implements Scene {
@@ -17,6 +19,19 @@ export class BattleScene implements Scene {
   private canvasHeight = 0
   private stageIndex = 0
   private levelIndex = 0
+  private battleEnded = false
+  private onBattleEnd: ((params: {
+    result: 'victory' | 'defeat'
+    stats: BattleStatsData
+    stars: number
+    title: string
+    stageIndex: number
+    levelIndex: number
+  }) => void) | null = null
+
+  setBattleEndHandler(fn: typeof this.onBattleEnd): void {
+    this.onBattleEnd = fn
+  }
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
@@ -36,6 +51,7 @@ export class BattleScene implements Scene {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
     this.paused = false
+    this.battleEnded = false
 
     const stage = STAGES[this.stageIndex]
     const level = stage.levels[this.levelIndex]
@@ -127,6 +143,19 @@ export class BattleScene implements Scene {
 
     this.manager.update(dt)
 
+    if (!this.battleEnded && (this.manager.status === BattleStatus.Victory || this.manager.status === BattleStatus.Defeat)) {
+      this.battleEnded = true
+      if (this.onBattleEnd) {
+        const stats = this.manager.getStats()
+        const result = this.manager.status === BattleStatus.Victory ? 'victory' as const : 'defeat' as const
+        const stars = result === 'victory' ? this.calculateStars(stats) : 0
+        const title = result === 'victory'
+          ? matchTitle(stats, SETTLEMENT_CONFIG.titleRules, SETTLEMENT_CONFIG.defaultVictoryTitle)
+          : SETTLEMENT_CONFIG.encouragements[Math.floor(Math.random() * SETTLEMENT_CONFIG.encouragements.length)]
+        this.onBattleEnd({ result, stats, stars, title, stageIndex: this.stageIndex, levelIndex: this.levelIndex })
+      }
+    }
+
     for (let li = 0; li < this.manager.laneCount; li++) {
       const lane = this.manager.getLane(li)
       const plantStates = lane.getPlantStates()
@@ -146,6 +175,12 @@ export class BattleScene implements Scene {
         segOffset += segments
       }
     }
+  }
+
+  private calculateStars(stats: BattleStatsData): number {
+    if (stats.missedCount === 0) return 3
+    if (stats.missedCount <= Math.floor(this.manager!.missedLimit / 2)) return 2
+    return 1
   }
 
   render(ctx: CanvasRenderingContext2D): void {
@@ -237,37 +272,13 @@ export class BattleScene implements Scene {
       ctx.fillText('已暂停 - 按 P 继续', w / 2, h / 2)
     }
 
-    // Victory / Defeat overlays
+    // Victory / Defeat overlays (SettlementScene handles the actual UI)
     if (this.manager) {
       const status = this.manager.status
 
-      if (status === BattleStatus.Victory) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+      if (status === BattleStatus.Victory || status === BattleStatus.Defeat) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
         ctx.fillRect(0, 0, w, h)
-        ctx.fillStyle = '#ffd700'
-        ctx.font = 'bold 56px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText('胜利！', w / 2, h / 2 - 20)
-        ctx.fillStyle = '#ffffff'
-        ctx.font = '24px sans-serif'
-        const stage = STAGES[this.stageIndex]
-        if (this.levelIndex + 1 < stage.levels.length) {
-          ctx.fillText('按空格进入下一关', w / 2, h / 2 + 40)
-        } else {
-          ctx.fillText('按空格返回菜单', w / 2, h / 2 + 40)
-        }
-      }
-
-      if (status === BattleStatus.Defeat) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
-        ctx.fillRect(0, 0, w, h)
-        ctx.fillStyle = '#e94560'
-        ctx.font = 'bold 56px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText('失败！', w / 2, h / 2 - 20)
-        ctx.fillStyle = '#ffffff'
-        ctx.font = '24px sans-serif'
-        ctx.fillText('按空格重新开始', w / 2, h / 2 + 40)
       }
     }
   }
@@ -289,19 +300,7 @@ export class BattleScene implements Scene {
 
     const status = this.manager.status
 
-    if (status === BattleStatus.Victory && event.key === ' ') {
-      const stage = STAGES[this.stageIndex]
-      if (this.levelIndex + 1 < stage.levels.length) {
-        this.levelIndex++
-        this.enter()
-      } else {
-        this.switchTo('menu')
-      }
-      return
-    }
-
-    if (status === BattleStatus.Defeat && event.key === ' ') {
-      this.enter()
+    if (status === BattleStatus.Victory || status === BattleStatus.Defeat) {
       return
     }
 
