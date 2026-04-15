@@ -56,9 +56,10 @@ export class PlantEntity implements Entity {
       ? -6 * Math.sin(this.bounceTimer / 0.15 * Math.PI)
       : 0
 
-    // 植物简笔画 — 固定大小，居中在分配宽度内
+    // 植物简笔画 — 大小随段数伸缩，居中在分配宽度内
     const baseColor = PLANT_COLORS[this.plantIndex % PLANT_COLORS.length]
-    const plantBodyW = 40
+    const segments = this.plantState?.config.comboSegment ?? 1
+    const plantBodyW = Math.min(20 + segments * 12, this.width)
     const plantBodyX = this.x + (this.width - plantBodyW) / 2
     drawPlant(ctx, plantBodyX, this.y, plantBodyW, this.height, baseColor, alive, bounceOffsetY)
 
