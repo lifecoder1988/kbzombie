@@ -58,7 +58,8 @@ export class PlantEntity implements Entity {
 
     // 植物简笔画 — 宽度由 Lane 按段数计算，直接使用
     const baseColor = PLANT_COLORS[this.plantIndex % PLANT_COLORS.length]
-    drawPlant(ctx, this.x, this.y, this.width, this.height, baseColor, alive, bounceOffsetY)
+    const plantId = this.plantState?.config.id
+    drawPlant(ctx, this.x, this.y, this.width, this.height, baseColor, alive, bounceOffsetY, plantId)
 
     // 当前目标高亮边框
     if (this.isCurrentTarget && alive) {

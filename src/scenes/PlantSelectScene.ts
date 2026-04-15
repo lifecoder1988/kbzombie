@@ -137,7 +137,7 @@ export class PlantSelectScene implements Scene {
         const plantW = 20 + plant.comboSegment * 12
         const color = PLANT_COLORS[pi % PLANT_COLORS.length]
 
-        drawPlant(ctx, boxX, boxY, plantW, boxH, color, true, 0)
+        drawPlant(ctx, boxX, boxY, plantW, boxH, color, true, 0, plant.id)
 
         // Name below plant
         ctx.fillStyle = '#ffffff'
@@ -187,7 +187,7 @@ export class PlantSelectScene implements Scene {
 
       // Cartoon plant
       const plantX = px + 30
-      drawPlant(ctx, plantX, py, plantW, plantGridH, color, true, 0)
+      drawPlant(ctx, plantX, py, plantW, plantGridH, color, true, 0, plant.id)
 
       // Name + segment below
       ctx.fillStyle = '#dddddd'
