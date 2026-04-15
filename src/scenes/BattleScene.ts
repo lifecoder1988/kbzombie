@@ -18,6 +18,10 @@ import { ParticleBurst } from './vfx/ParticleBurst'
 import { DeathFlyout } from './vfx/DeathFlyout'
 import { FullScreenFlash } from './vfx/FullScreenFlash'
 
+// Fixed logical game dimensions — all game logic runs in this coordinate space
+const GAME_WIDTH = 1280
+const GAME_HEIGHT = 720
+
 export class BattleScene implements Scene {
   readonly name = 'battle'
   private switchTo: (name: string) => void
@@ -25,8 +29,8 @@ export class BattleScene implements Scene {
   private manager: BattleManager | null = null
   private laneEntities: PlantEntity[][] = []
   private paused = false
-  private canvasWidth = 0
-  private canvasHeight = 0
+  private screenWidth = 0
+  private screenHeight = 0
   private stageIndex = 0
   private levelIndex = 0
   private difficultyKey = 'normal'
@@ -72,9 +76,9 @@ export class BattleScene implements Scene {
   }
 
   enter(): void {
-    this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
-    this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
-    this.gameAreaHeight = this.keyboardVisible ? Math.floor(this.canvasHeight * 0.82) : this.canvasHeight
+    this.screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+    this.screenHeight = typeof window !== 'undefined' ? window.innerHeight : 720
+    this.gameAreaHeight = this.keyboardVisible ? Math.floor(GAME_HEIGHT * 0.82) : GAME_HEIGHT
     this.paused = false
     this.battleEnded = false
 
@@ -130,7 +134,7 @@ export class BattleScene implements Scene {
       projectileSpeed: BATTLE_PARAMS.projectileSpeed,
       healAmount: BATTLE_PARAMS.healAmount,
       wavePauseDuration: BATTLE_PARAMS.wavePauseDuration,
-      canvasWidth: this.canvasWidth,
+      canvasWidth: GAME_WIDTH,
       canvasHeight: this.gameAreaHeight,
       synergyMultiplier: SYNERGY_PARAMS.multiplier,
       effectParams: BATTLE_PARAMS.effectParams,
@@ -163,9 +167,9 @@ export class BattleScene implements Scene {
   }
 
   update(dt: number): void {
-    this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
-    this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
-    this.gameAreaHeight = this.keyboardVisible ? Math.floor(this.canvasHeight * 0.82) : this.canvasHeight
+    // Read screen size for rendering (game logic uses fixed GAME_WIDTH/GAME_HEIGHT)
+    this.screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
+    this.screenHeight = typeof window !== 'undefined' ? window.innerHeight : 720
 
     if (!this.manager || this.paused) return
 
@@ -320,12 +324,25 @@ export class BattleScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    const w = this.canvasWidth
-    const h = this.canvasHeight
+    const sw = this.screenWidth
+    const sh = this.screenHeight
+
+    // Compute keyboard area in screen space
+    const kbScreenH = this.keyboardVisible ? Math.floor(sh * 0.18) : 0
+    const gameScreenH = sh - kbScreenH
+
+    // Scale logical game coordinates to screen
+    const scaleX = sw / GAME_WIDTH
+    const scaleY = gameScreenH / GAME_HEIGHT
 
     const shake = this.vfxManager.getShakeOffset()
     ctx.save()
+    ctx.scale(scaleX, scaleY)
     ctx.translate(shake.x, shake.y)
+
+    // All rendering below is in logical coordinates (GAME_WIDTH × GAME_HEIGHT)
+    const w = GAME_WIDTH
+    const h = GAME_HEIGHT
 
     // Background: checkerboard grass with plant zone
     drawBattlefield(ctx, w, this.gameAreaHeight, w * 0.35)
@@ -401,14 +418,17 @@ export class BattleScene implements Scene {
       }
     }
 
-    ctx.restore() // end shake translate
+    ctx.restore() // end scale + shake translate
+
+    // VFX renders in logical space too
+    ctx.save()
+    ctx.scale(scaleX, scaleY)
     this.vfxManager.render(ctx)
+    ctx.restore()
 
-    // Virtual keyboard
+    // Virtual keyboard — in screen space (not scaled)
     if (this.keyboardVisible && this.manager) {
-      const kbY = this.gameAreaHeight
-      const kbH = this.canvasHeight - this.gameAreaHeight
-
+      const kbY = gameScreenH
       const highlightKeys: string[] = []
       const status = this.manager.status
       if (status === BattleStatus.Fighting) {
@@ -422,26 +442,26 @@ export class BattleScene implements Scene {
         }
       }
 
-      renderVirtualKeyboard(ctx, 0, kbY, w, kbH, highlightKeys)
+      renderVirtualKeyboard(ctx, 0, kbY, sw, kbScreenH, highlightKeys)
     }
 
-    // Pause overlay
+    // Pause overlay (screen space)
     if (this.paused) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-      ctx.fillRect(0, 0, w, h)
+      ctx.fillRect(0, 0, sw, sh)
       ctx.fillStyle = '#ffffff'
       ctx.font = 'bold 36px sans-serif'
       ctx.textAlign = 'center'
-      ctx.fillText('已暂停 - 按 P 继续', w / 2, h / 2)
+      ctx.fillText('已暂停 - 按 P 继续', sw / 2, sh / 2)
     }
 
-    // Victory / Defeat overlays (SettlementScene handles the actual UI)
+    // Victory / Defeat overlays (screen space)
     if (this.manager) {
       const status = this.manager.status
 
       if (status === BattleStatus.Victory || status === BattleStatus.Defeat) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-        ctx.fillRect(0, 0, w, h)
+        ctx.fillRect(0, 0, sw, sh)
       }
     }
   }
