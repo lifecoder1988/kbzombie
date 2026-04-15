@@ -1,7 +1,7 @@
 import { EntityManager } from '../engine/EntityManager'
 import { intersects } from '../engine/CollisionDetection'
 import { BattleStatus } from './types'
-import type { PlantConfig, PlantState, WaveConfig, ZombieConfig, Element } from './types'
+import type { PlantConfig, PlantState, WaveConfig, ZombieConfig, Element, GameEvent } from './types'
 import { Lane } from './Lane'
 import { calculateSettlement } from './Settlement'
 import { IGNORED_KEYS } from './InputHandler'
@@ -68,6 +68,7 @@ export class BattleManager {
   private projectileIdCounter = 0
   private _pendingProjectiles = 0
   private readonly stats = new BattleStats()
+  private readonly _events: GameEvent[] = []
 
   constructor(config: BattleConfig) {
     this.config = config
@@ -146,6 +147,13 @@ export class BattleManager {
 
   getStats(): BattleStatsData {
     return this.stats.getStats()
+  }
+
+  consumeEvents(): GameEvent[] {
+    if (this._events.length === 0) return this._events
+    const events = this._events.slice()
+    this._events.length = 0
+    return events
   }
 
   getChainLetters(laneIndex?: number): readonly string[] {
@@ -368,12 +376,15 @@ export class BattleManager {
           z.takeDamage(proj.power)
           proj.onHit(z.id)
 
+          this._events.push({ type: 'zombieHit', x: z.x + z.width / 2, y: z.y + z.height / 2, zombieId: z.id, element: proj.element })
+
           // Apply element effects
           this.applyElementEffect(proj.element, z, params)
 
           if (!z.active) {
             this.processedInWave++
             this.stats.recordKill()
+            this._events.push({ type: 'zombieDeath', x: z.x, y: z.y, width: z.width, height: z.height, color: z.zombieColor })
           }
 
           // Handle impact type
@@ -563,12 +574,15 @@ export class BattleManager {
         this.lanes[i].regenerateLetters(otherFirstLetters)
       }
 
+      const completedWave = this._currentWave
       this._currentWave++
+      this._events.push({ type: 'waveEnd', waveIndex: completedWave })
       if (this._currentWave >= this.config.waves.length) {
         this._status = BattleStatus.Victory
       } else {
         this._status = BattleStatus.WavePause
         this.wavePauseTimer = this.config.wavePauseDuration
+        this._events.push({ type: 'waveStart', waveIndex: this._currentWave, totalWaves: this.config.waves.length })
       }
     }
   }
@@ -599,6 +613,7 @@ export class BattleManager {
       if (lower === lane.currentLetter) {
         // Hit
         const settlement = lane.hit()
+        this._events.push({ type: 'hit', x: lane.plantPositions[Math.max(0, lane.comboCount - 1)], y: lane.laneY - 10, letter: lower, laneIndex: this.currentLaneIndex })
         if (settlement) {
           this.executeSettlement(this.currentLaneIndex, settlement.comboCount, settlement.isFullChain)
           this.onLaneSettled(this.currentLaneIndex)
@@ -606,6 +621,7 @@ export class BattleManager {
         }
       } else {
         // Miss
+        this._events.push({ type: 'miss', laneIndex: this.currentLaneIndex })
         const settlement = lane.miss()
         if (settlement) {
           this.executeSettlement(this.currentLaneIndex, settlement.comboCount, settlement.isFullChain)
@@ -621,6 +637,7 @@ export class BattleManager {
         if (lower === lane.currentLetter) {
           this.currentLaneIndex = i
           const settlement = lane.hit()
+          this._events.push({ type: 'hit', x: lane.plantPositions[Math.max(0, lane.comboCount - 1)], y: lane.laneY - 10, letter: lower, laneIndex: i })
           if (settlement) {
             this.executeSettlement(i, settlement.comboCount, settlement.isFullChain)
             this.onLaneSettled(i)
@@ -682,6 +699,8 @@ export class BattleManager {
       lane.healOnFullChain(this.config.healAmount)
       this.reassignChewTargetsForLane(laneIndex)
     }
+
+    this._events.push({ type: 'settlement', x: lane.plantPositions[0], y: lane.laneY, power: result.totalPower, isFullChain, plantCount: result.aliveActivatedIndices.length, totalPlants: plants.length })
   }
 
   private fireSingleProjectile(

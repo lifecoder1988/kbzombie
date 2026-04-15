@@ -59,6 +59,7 @@ export class ZombieEntity implements Entity {
 
   get state(): ZombieState { return this._state }
   get currentHp(): number { return this._currentHp }
+  get zombieColor(): string { return this.color }
 
   applyStatus(status: ZombieStatus): void {
     // Same type → refresh remaining and value

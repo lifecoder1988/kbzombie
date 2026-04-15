@@ -95,3 +95,12 @@ export interface ZombieStatus {
   remaining: number
   value: number
 }
+
+export type GameEvent =
+  | { readonly type: 'hit'; readonly x: number; readonly y: number; readonly letter: string; readonly laneIndex: number }
+  | { readonly type: 'miss'; readonly laneIndex: number }
+  | { readonly type: 'settlement'; readonly x: number; readonly y: number; readonly power: number; readonly isFullChain: boolean; readonly plantCount: number; readonly totalPlants: number }
+  | { readonly type: 'zombieHit'; readonly x: number; readonly y: number; readonly zombieId: string; readonly element: Element }
+  | { readonly type: 'zombieDeath'; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly color: string }
+  | { readonly type: 'waveStart'; readonly waveIndex: number; readonly totalWaves: number }
+  | { readonly type: 'waveEnd'; readonly waveIndex: number }
