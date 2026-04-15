@@ -2,6 +2,7 @@ import type { Entity } from '../engine/types'
 import { RenderLayer } from '../engine/types'
 import { ZombieState } from './types'
 import type { ZombieStatus } from './types'
+import { drawZombie } from '../scenes/renderers/ZombieRenderer'
 
 const ZOMBIE_TAGS: ReadonlySet<string> = new Set(['zombie'])
 const MAX_STATUSES = 8
@@ -197,12 +198,15 @@ export class ZombieEntity implements Entity {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    if (this.flashTimer > 0) {
-      ctx.fillStyle = '#ffffff'
-    } else {
-      ctx.fillStyle = this._state === ZombieState.Chewing ? '#ff6600' : this.color
-    }
-    ctx.fillRect(this.x, this.y, this.width, this.height)
+    drawZombie(ctx, this.x, this.y, this.width, this.height,
+      this._type, this.color, {
+        flashTimer: this.flashTimer,
+        walkPhase: this.walkPhase,
+        state: this._state,
+        statuses: this._statuses,
+        statusCount: this._statusCount,
+      })
+    // HP bar
     const barWidth = this.width
     const barHeight = 4
     const barY = this.y - 8

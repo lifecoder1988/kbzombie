@@ -10,6 +10,7 @@ import type { BattleStatsData } from '../game/BattleStats'
 import { matchTitle } from '../game/TitleMatcher'
 import { validateConfig } from '../config/validation'
 import { renderVirtualKeyboard } from './VirtualKeyboard'
+import { drawBattlefield } from './renderers/BattlefieldRenderer'
 import { VfxManager } from './VfxManager'
 import { LetterPop } from './vfx/LetterPop'
 import { FlashPulse } from './vfx/FlashPulse'
@@ -318,9 +319,8 @@ export class BattleScene implements Scene {
     ctx.save()
     ctx.translate(shake.x, shake.y)
 
-    // Background: green grass
-    ctx.fillStyle = '#2d5a1e'
-    ctx.fillRect(0, 0, w, h)
+    // Background: checkerboard grass with plant zone
+    drawBattlefield(ctx, w, this.gameAreaHeight, w * 0.35)
 
     // Lane lines (highlight current lane)
     if (this.manager) {

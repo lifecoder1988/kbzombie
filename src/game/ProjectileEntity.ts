@@ -1,19 +1,11 @@
 import type { Entity } from '../engine/types'
 import { RenderLayer } from '../engine/types'
 import type { Element, Spread, Flight, Impact } from './types'
+import { drawProjectile } from '../scenes/renderers/ProjectileRenderer'
 
 const PROJECTILE_TAGS: ReadonlySet<string> = new Set(['projectile'])
 
 const MAX_TRAIL = 4
-
-const ELEMENT_COLORS: Record<Element, string> = {
-  normal: '#ffd700',
-  ice: '#87ceeb',
-  fire: '#ff6347',
-  electric: '#9b59b6',
-  stun: '#f1c40f',
-  knockback: '#e67e22',
-}
 
 export interface ProjectileConfig {
   readonly id: string
@@ -226,9 +218,11 @@ export class ProjectileEntity implements Entity {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = ELEMENT_COLORS[this.element]
-    ctx.beginPath()
-    ctx.ellipse(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, this.height / 2, 0, 0, Math.PI * 2)
-    ctx.fill()
+    drawProjectile(
+      ctx, this.x, this.y, this.width, this.height,
+      this.element,
+      this.trailPositions, this.trailCount, this.trailIndex,
+      this._rotation,
+    )
   }
 }

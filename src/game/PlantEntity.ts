@@ -1,6 +1,7 @@
 import type { Entity } from '../engine/types'
 import { RenderLayer } from '../engine/types'
 import type { PlantState } from './types'
+import { drawPlant } from '../scenes/renderers/PlantRenderer'
 
 const PLANT_TAGS: ReadonlySet<string> = new Set(['plant'])
 
@@ -55,11 +56,9 @@ export class PlantEntity implements Entity {
       ? -6 * Math.sin(this.bounceTimer / 0.15 * Math.PI)
       : 0
 
-    // 植物色块
+    // 植物简笔画
     const baseColor = PLANT_COLORS[this.plantIndex % PLANT_COLORS.length]
-    ctx.globalAlpha = alive ? 1.0 : 0.3
-    ctx.fillStyle = baseColor
-    ctx.fillRect(this.x, this.y + bounceOffsetY, this.width, this.height)
+    drawPlant(ctx, this.x, this.y, this.width, this.height, baseColor, alive, bounceOffsetY)
 
     // 当前目标高亮边框
     if (this.isCurrentTarget && alive) {
