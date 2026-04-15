@@ -15,6 +15,7 @@ export const STAGES: readonly StageDef[] = [
           { zombieType: 'normal', count: 7, interval: 2500 },
           { zombieType: 'normal', count: 10, interval: 2000 },
         ],
+        rewards: { unlockPlants: ['snow_pea', 'repeater'] },
       },
       {
         id: 2,
@@ -24,6 +25,7 @@ export const STAGES: readonly StageDef[] = [
           { zombieType: 'normal', count: 12, interval: 1500 },
           { zombieType: 'normal', count: 15, interval: 1200 },
         ],
+        rewards: { unlockPlants: ['cactus'], slotIncrease: 4 },
       },
     ],
   },
@@ -39,6 +41,7 @@ export const STAGES: readonly StageDef[] = [
         waves: [
           { zombieType: 'fat', count: 8, interval: 800 },
         ],
+        rewards: { unlockPlants: ['fume_shroom'] },
       },
     ],
   },
@@ -54,6 +57,7 @@ export const STAGES: readonly StageDef[] = [
         waves: [
           { zombieType: 'fat', count: 10, interval: 600 },
         ],
+        rewards: { unlockPlants: ['cattail'], slotIncrease: 4 },
       },
     ],
   },
@@ -85,6 +89,7 @@ export const STAGES: readonly StageDef[] = [
           { zombieType: 'normal', count: 8, interval: 2000 },
           { zombieType: 'normal', count: 10, interval: 1500 },
         ],
+        rewards: { slotIncrease: 4 },
       },
     ],
   },
