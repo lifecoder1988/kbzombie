@@ -59,11 +59,13 @@ export class SaveDataService {
     stars: number,
     stageLevelCount: number,
     hasNextStage: boolean,
+    rewards?: { unlockPlants?: readonly string[]; slotIncrease?: number },
   ): void {
     const data = this.load()
     const levelId = `${stageIndex}-${levelIndex}`
+    const isFirstCompletion = !data.completedLevels.includes(levelId)
 
-    if (!data.completedLevels.includes(levelId)) {
+    if (isFirstCompletion) {
       data.completedLevels.push(levelId)
     }
 
@@ -77,6 +79,20 @@ export class SaveDataService {
     } else if (hasNextStage) {
       data.currentStageIndex = stageIndex + 1
       data.currentLevelIndex = 0
+    }
+
+    // Apply rewards on first completion only
+    if (isFirstCompletion && rewards) {
+      if (rewards.unlockPlants) {
+        for (const plantId of rewards.unlockPlants) {
+          if (!data.unlockedPlants.includes(plantId)) {
+            data.unlockedPlants.push(plantId)
+          }
+        }
+      }
+      if (rewards.slotIncrease) {
+        data.slotSize += rewards.slotIncrease
+      }
     }
 
     this.save(data)
@@ -97,6 +113,12 @@ export class SaveDataService {
 
   getDifficulty(): string {
     return this.load().difficulty
+  }
+
+  setKeyboardVisible(visible: boolean): void {
+    const data = this.load()
+    data.keyboardVisible = visible
+    this.save(data)
   }
 
   setDifficulty(difficulty: string): void {

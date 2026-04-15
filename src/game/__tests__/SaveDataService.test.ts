@@ -155,4 +155,62 @@ describe('SaveDataService', () => {
     expect(data.slotSize).toBe(4)
     expect(data.keyboardVisible).toBe(true)
   })
+
+  describe('reward claiming', () => {
+    it('completeLevel 首次通关时应用 rewards（解锁植物 + slot 增加）', () => {
+      service.completeLevel(0, 0, 3, 2, true, {
+        unlockPlants: ['snow_pea', 'repeater'],
+        slotIncrease: 4,
+      })
+      const data = service.load()
+      expect(data.unlockedPlants).toContain('peashooter')
+      expect(data.unlockedPlants).toContain('snow_pea')
+      expect(data.unlockedPlants).toContain('repeater')
+      expect(data.slotSize).toBe(8)
+    })
+
+    it('completeLevel 重复通关不重复发放 rewards', () => {
+      service.completeLevel(0, 0, 2, 2, true, {
+        unlockPlants: ['snow_pea'],
+        slotIncrease: 4,
+      })
+      service.completeLevel(0, 0, 3, 2, true, {
+        unlockPlants: ['snow_pea'],
+        slotIncrease: 4,
+      })
+      const data = service.load()
+      expect(data.unlockedPlants.filter(p => p === 'snow_pea').length).toBe(1)
+      expect(data.slotSize).toBe(8)
+    })
+
+    it('completeLevel 不传 rewards 时行为不变', () => {
+      service.completeLevel(0, 0, 3, 2, true)
+      const data = service.load()
+      expect(data.unlockedPlants).toEqual(['peashooter'])
+      expect(data.slotSize).toBe(4)
+    })
+
+    it('completeLevel 只传 unlockPlants 不影响 slotSize', () => {
+      service.completeLevel(0, 0, 3, 2, true, { unlockPlants: ['snow_pea'] })
+      const data = service.load()
+      expect(data.unlockedPlants).toContain('snow_pea')
+      expect(data.slotSize).toBe(4)
+    })
+
+    it('completeLevel 只传 slotIncrease 不影响 unlockedPlants', () => {
+      service.completeLevel(0, 0, 3, 2, true, { slotIncrease: 4 })
+      const data = service.load()
+      expect(data.unlockedPlants).toEqual(['peashooter'])
+      expect(data.slotSize).toBe(8)
+    })
+  })
+
+  describe('keyboard toggle', () => {
+    it('setKeyboardVisible 写入存档', () => {
+      service.setKeyboardVisible(false)
+      expect(service.load().keyboardVisible).toBe(false)
+      service.setKeyboardVisible(true)
+      expect(service.load().keyboardVisible).toBe(true)
+    })
+  })
 })
