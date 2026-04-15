@@ -19,6 +19,7 @@ export class BattleScene implements Scene {
   private canvasHeight = 0
   private stageIndex = 0
   private levelIndex = 0
+  private difficultyKey = 'normal'
   private battleEnded = false
   private onBattleEnd: ((params: {
     result: 'victory' | 'defeat'
@@ -42,9 +43,10 @@ export class BattleScene implements Scene {
     }
   }
 
-  setLevel(stageIndex: number, levelIndex: number): void {
+  setLevel(stageIndex: number, levelIndex: number, difficultyKey?: string): void {
     this.stageIndex = stageIndex
     this.levelIndex = levelIndex
+    if (difficultyKey !== undefined) this.difficultyKey = difficultyKey
   }
 
   enter(): void {
@@ -55,7 +57,7 @@ export class BattleScene implements Scene {
 
     const stage = STAGES[this.stageIndex]
     const level = stage.levels[this.levelIndex]
-    const difficulty = DIFFICULTIES[DEFAULT_DIFFICULTY]
+    const difficulty = DIFFICULTIES[this.difficultyKey] ?? DIFFICULTIES[DEFAULT_DIFFICULTY]
     const laneCount = level.laneCount ?? 1
 
     // Helper: resolve plant IDs → PlantConfig[]

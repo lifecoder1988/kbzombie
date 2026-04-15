@@ -50,7 +50,7 @@ export default function App() {
     menuScene.setActionHandler((action) => {
       if (action === 'continue') {
         const save = saveService.load()
-        battleScene.setLevel(save.currentStageIndex, save.currentLevelIndex)
+        battleScene.setLevel(save.currentStageIndex, save.currentLevelIndex, save.difficulty)
         switchTo('battle')
       } else if (action === 'select') {
         stageSelectScene.setData(STAGES, saveService.load())
@@ -84,11 +84,11 @@ export default function App() {
           refreshMenu()
           switchTo('menu')
         } else {
-          battleScene.setLevel(save.currentStageIndex, save.currentLevelIndex)
+          battleScene.setLevel(save.currentStageIndex, save.currentLevelIndex, save.difficulty)
           switchTo('battle')
         }
       } else if (action === 'replay') {
-        battleScene.setLevel(stageIndex, levelIndex)
+        battleScene.setLevel(stageIndex, levelIndex, saveService.getDifficulty())
         switchTo('battle')
       } else if (action === 'select') {
         stageSelectScene.setData(STAGES, saveService.load())
@@ -99,7 +99,7 @@ export default function App() {
     // --- StageSelectScene actions ---
     stageSelectScene.setActionHandler((action, stageIndex, levelIndex) => {
       if (action === 'play') {
-        battleScene.setLevel(stageIndex, levelIndex)
+        battleScene.setLevel(stageIndex, levelIndex, saveService.getDifficulty())
         switchTo('battle')
       } else if (action === 'back') {
         refreshMenu()
