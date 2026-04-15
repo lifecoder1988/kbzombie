@@ -155,8 +155,11 @@ export class BattleScene implements Scene {
           ? matchTitle(stats, SETTLEMENT_CONFIG.titleRules, SETTLEMENT_CONFIG.defaultVictoryTitle)
           : SETTLEMENT_CONFIG.encouragements[Math.floor(Math.random() * SETTLEMENT_CONFIG.encouragements.length)]
         this.onBattleEnd({ result, stats, stars, title, stageIndex: this.stageIndex, levelIndex: this.levelIndex })
+        return // switchTo in callback calls exit(), manager is now null
       }
     }
+
+    if (!this.manager) return
 
     for (let li = 0; li < this.manager.laneCount; li++) {
       const lane = this.manager.getLane(li)
