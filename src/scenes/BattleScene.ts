@@ -67,7 +67,7 @@ export class BattleScene implements Scene {
         return {
           id: def.id,
           name: def.name,
-          comboSegment: def.comboSegment,
+          comboSegment: Math.max(1, Math.round(def.comboSegment * (difficulty.plantSegmentOverrides?.[def.id] ?? difficulty.segmentMultiplier))),
           attackPower: def.attackPower,
           hp: def.hp,
           element: def.element,

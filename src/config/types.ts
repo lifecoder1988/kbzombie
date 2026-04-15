@@ -67,6 +67,8 @@ export interface StageDef {
 export interface DifficultyDef {
   readonly missedLimit: number
   readonly zombieSpeedMultiplier: number
+  readonly segmentMultiplier: number                              // 全局连击段数倍率，默认 1.0
+  readonly plantSegmentOverrides?: Readonly<Record<string, number>>  // 个别植物的倍率覆盖，key 为植物 id
   readonly displayName: string
 }
 
