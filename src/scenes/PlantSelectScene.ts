@@ -1,6 +1,9 @@
 // src/scenes/PlantSelectScene.ts
 import type { Scene, InputEvent } from '../engine/types'
 import type { PlantDef } from '../config/types'
+import { drawPlant } from './renderers/PlantRenderer'
+
+const PLANT_COLORS = ['#22cc22', '#44aaff', '#ff8844', '#cc44cc', '#ffcc00']
 
 type PlantSelectAction = 'start' | 'back'
 
@@ -123,31 +126,26 @@ export class PlantSelectScene implements Scene {
       ctx.fillStyle = isOver ? '#ff4444' : '#44cc44'
       ctx.fillText(`${used}/${this.slotSize}`, 30, rowY + 38)
 
-      // Plant boxes
+      // Plant visuals (cartoon, matching battle scene)
       let boxX = 110
       const boxY = rowY + 4
       const boxH = laneRowHeight - 16
-      for (const id of this.laneSelections[i]) {
+      for (let pi = 0; pi < this.laneSelections[i].length; pi++) {
+        const id = this.laneSelections[i][pi]
         const plant = plantMap[id]
         if (!plant) continue
-        const boxW = Math.max(60, plant.name.length * 14 + 20)
+        const plantW = 20 + plant.comboSegment * 12
+        const color = PLANT_COLORS[pi % PLANT_COLORS.length]
 
-        ctx.fillStyle = isCurrent ? '#2a3a5e' : '#1e2a42'
-        ctx.fillRect(boxX, boxY, boxW, boxH)
-        ctx.strokeStyle = isCurrent ? '#ffd700' : '#445577'
-        ctx.lineWidth = 1
-        ctx.strokeRect(boxX, boxY, boxW, boxH)
+        drawPlant(ctx, boxX, boxY, plantW, boxH, color, true, 0)
 
+        // Name below plant
         ctx.fillStyle = '#ffffff'
-        ctx.font = '13px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.fillText(plant.name, boxX + boxW / 2, boxY + 22)
-
-        ctx.fillStyle = '#aaaaaa'
         ctx.font = '11px sans-serif'
-        ctx.fillText(`${plant.comboSegment}段`, boxX + boxW / 2, boxY + 40)
+        ctx.textAlign = 'center'
+        ctx.fillText(plant.name, boxX + plantW / 2, boxY + boxH + 12)
 
-        boxX += boxW + 6
+        boxX += plantW + 10
       }
     }
 
@@ -170,17 +168,32 @@ export class PlantSelectScene implements Scene {
     const cols = Math.floor((w - 60) / 220)
     const colW = Math.floor((w - 60) / Math.max(cols, 1))
 
+    const plantGridH = 50
+    const plantGridRowH = plantGridH + 28
     for (let pi = 0; pi < this.unlockedPlants.length; pi++) {
       const plant = this.unlockedPlants[pi]
       const col = pi % cols
       const row = Math.floor(pi / cols)
       const px = 30 + col * colW
-      const py = gridTop + 22 + row * 24
+      const py = gridTop + 22 + row * plantGridRowH
+      const plantW = 20 + plant.comboSegment * 12
+      const color = PLANT_COLORS[pi % PLANT_COLORS.length]
 
-      ctx.font = '14px sans-serif'
-      ctx.fillStyle = '#dddddd'
+      // Number key hint
+      ctx.font = 'bold 13px monospace'
+      ctx.fillStyle = '#888888'
       ctx.textAlign = 'left'
-      ctx.fillText(`[${pi + 1}] ${plant.name} (${plant.comboSegment}段)`, px, py)
+      ctx.fillText(`[${pi + 1}]`, px, py + plantGridH / 2 + 4)
+
+      // Cartoon plant
+      const plantX = px + 30
+      drawPlant(ctx, plantX, py, plantW, plantGridH, color, true, 0)
+
+      // Name + segment below
+      ctx.fillStyle = '#dddddd'
+      ctx.font = '12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(`${plant.name} (${plant.comboSegment}段)`, plantX + plantW / 2, py + plantGridH + 14)
     }
 
     // 7. Help text
