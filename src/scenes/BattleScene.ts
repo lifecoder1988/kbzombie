@@ -1,6 +1,6 @@
 import type { Scene, InputEvent } from '../engine/types'
 import type { PlantConfig } from '../game/types'
-import { BattleStatus } from '../game/types'
+import { BattleStatus, ZombieState } from '../game/types'
 import type { GameEvent } from '../game/types'
 import { BattleManager } from '../game/BattleManager'
 import { PlantEntity } from '../game/PlantEntity'
@@ -17,6 +17,9 @@ import { FlashPulse } from './vfx/FlashPulse'
 import { ParticleBurst } from './vfx/ParticleBurst'
 import { DeathFlyout } from './vfx/DeathFlyout'
 import { FullScreenFlash } from './vfx/FullScreenFlash'
+import { WaveAnnounce } from './vfx/WaveAnnounce'
+import { DamageNumber } from './vfx/DamageNumber'
+import { SoundSynthesizer } from './SoundSynthesizer'
 
 // Fixed logical game dimensions — all game logic runs in this coordinate space
 const GAME_WIDTH = 1280
@@ -38,6 +41,9 @@ export class BattleScene implements Scene {
   private gameAreaHeight = 0
   private selectedPlants: readonly (readonly string[])[] | null = null
   private vfxManager = new VfxManager()
+  private sound = new SoundSynthesizer()
+  private chewSoundTimer = 0
+  private fadeAlpha = 1
   private battleEnded = false
   private onBattleEnd: ((params: {
     result: 'victory' | 'defeat'
@@ -76,11 +82,13 @@ export class BattleScene implements Scene {
   }
 
   enter(): void {
+    this.sound.init()
     this.screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
     this.screenHeight = typeof window !== 'undefined' ? window.innerHeight : 720
     this.gameAreaHeight = this.keyboardVisible ? Math.floor(GAME_HEIGHT * 0.82) : GAME_HEIGHT
     this.paused = false
     this.battleEnded = false
+    this.fadeAlpha = 1
 
     const stage = STAGES[this.stageIndex]
     const level = stage.levels[this.levelIndex]
@@ -171,6 +179,10 @@ export class BattleScene implements Scene {
     this.screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1280
     this.screenHeight = typeof window !== 'undefined' ? window.innerHeight : 720
 
+    if (this.fadeAlpha > 0) {
+      this.fadeAlpha = Math.max(0, this.fadeAlpha - dt / 300)
+    }
+
     if (!this.manager || this.paused) return
 
     this.manager.update(dt)
@@ -179,13 +191,30 @@ export class BattleScene implements Scene {
     for (let i = 0; i < events.length; i++) {
       this.processGameEvent(events[i])
     }
-    this.vfxManager.update(dt)
+    this.vfxManager.update(dt / 1000)
+
+    // Periodic chew sound when any zombie is chewing
+    this.chewSoundTimer -= dt
+    if (this.chewSoundTimer <= 0) {
+      const zombies = this.manager.getEntityManager().getByTag('zombie') as ZombieEntity[]
+      let anyChewing = false
+      for (let i = 0; i < zombies.length; i++) {
+        if (zombies[i].state === ZombieState.Chewing) { anyChewing = true; break }
+      }
+      if (anyChewing) {
+        this.sound.play('plantChew')
+        this.chewSoundTimer = 300  // repeat every 300ms while chewing
+      } else {
+        this.chewSoundTimer = 100  // check again soon
+      }
+    }
 
     if (!this.battleEnded && (this.manager.status === BattleStatus.Victory || this.manager.status === BattleStatus.Defeat)) {
       this.battleEnded = true
       if (this.onBattleEnd) {
         const stats = this.manager.getStats()
         const result = this.manager.status === BattleStatus.Victory ? 'victory' as const : 'defeat' as const
+        this.sound.play(result)
         const stars = result === 'victory' ? this.calculateStars(stats) : 0
         const title = result === 'victory'
           ? matchTitle(stats, SETTLEMENT_CONFIG.titleRules, SETTLEMENT_CONFIG.defaultVictoryTitle)
@@ -222,6 +251,9 @@ export class BattleScene implements Scene {
   private processGameEvent(event: GameEvent): void {
     switch (event.type) {
       case 'hit': {
+        // Sound: pitch rises with combo progress
+        const pitchOffset = this.manager ? this.manager.getLane(event.laneIndex).comboCount : 0
+        this.sound.play('hit', { pitch: pitchOffset })
         // 金色字母弹出 — 大字、慢消散、上飘
         const pop = this.vfxManager.acquire('letterPop', () => new LetterPop())
         pop.init(event.x, event.y - 20, event.letter.toUpperCase(), '#ffd700', 36, 0.5, 2.5)
@@ -231,7 +263,7 @@ export class BattleScene implements Scene {
         if (laneEnts) {
           for (let j = 0; j < laneEnts.length; j++) {
             if (laneEnts[j].isCurrentTarget) {
-              laneEnts[j].bounceTimer = 0.2
+              laneEnts[j].bounceTimer = 200
               break
             }
           }
@@ -239,6 +271,7 @@ export class BattleScene implements Scene {
         break
       }
       case 'miss': {
+        this.sound.play('miss')
         // 屏幕震动 — 更强更久
         this.vfxManager.shake(6, 0.25)
         if (this.manager) {
@@ -258,6 +291,11 @@ export class BattleScene implements Scene {
       }
       case 'settlement': {
         const intensity = event.totalPlants > 0 ? event.plantCount / event.totalPlants : 0
+        if (event.isFullChain) {
+          this.sound.play('fullChain')
+        } else {
+          this.sound.play('settlement', { intensity })
+        }
         // 闪光脉冲 — 更大更亮
         const pulse = this.vfxManager.acquire('flashPulse', () => new FlashPulse())
         const endR = 80 + 150 * intensity
@@ -288,7 +326,8 @@ export class BattleScene implements Scene {
         break
       }
       case 'zombieHit': {
-        // 僵尸闪白 — 更久
+        this.sound.play('zombieHit')
+        // 僵尸闪白
         if (this.manager) {
           const zombies = this.manager.getEntityManager().getByTag('zombie')
           for (let j = 0; j < zombies.length; j++) {
@@ -298,9 +337,14 @@ export class BattleScene implements Scene {
             }
           }
         }
+        // Damage number on every hit
+        const dmgNum = this.vfxManager.acquire('damageNumber', () => new DamageNumber())
+        dmgNum.init(event.x, event.y, event.damage)
+        this.vfxManager.spawn(dmgNum)
         break
       }
       case 'zombieDeath': {
+        this.sound.play('zombieDeath')
         // 死亡残影 + 额外粒子碎片
         const flyout = this.vfxManager.acquire('deathFlyout', () => new DeathFlyout())
         flyout.init(event.x, event.y, event.width, event.height, event.color)
@@ -311,7 +355,17 @@ export class BattleScene implements Scene {
         this.vfxManager.spawn(debris)
         break
       }
-      case 'waveStart':
+      case 'plantDeath': {
+        this.sound.play('plantDeath')
+        break
+      }
+      case 'waveStart': {
+        this.sound.play('waveStart')
+        const announce = this.vfxManager.acquire('waveAnnounce', () => new WaveAnnounce())
+        announce.init(event.waveIndex, event.totalWaves, 640, this.gameAreaHeight / 2)
+        this.vfxManager.spawn(announce)
+        break
+      }
       case 'waveEnd':
         break
     }
@@ -443,6 +497,12 @@ export class BattleScene implements Scene {
       }
 
       renderVirtualKeyboard(ctx, 0, kbY, sw, kbScreenH, highlightKeys)
+    }
+
+    // Fade-in overlay (screen space)
+    if (this.fadeAlpha > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${this.fadeAlpha})`
+      ctx.fillRect(0, 0, sw, sh)
     }
 
     // Pause overlay (screen space)

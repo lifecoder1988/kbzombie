@@ -26,6 +26,7 @@ export class PlantEntity implements Entity {
   /** 是否是当前连击目标植物 */
   isCurrentTarget = false
   bounceTimer = 0
+  idlePhase = 0
 
   constructor(id: string, x: number, y: number, width: number, plantIndex: number) {
     this.id = id
@@ -33,6 +34,7 @@ export class PlantEntity implements Entity {
     this.y = y
     this.width = width
     this.plantIndex = plantIndex
+    this.idlePhase = plantIndex * 0.7
   }
 
   syncState(state: PlantState): void {
@@ -44,6 +46,7 @@ export class PlantEntity implements Entity {
       this.bounceTimer -= dt
       if (this.bounceTimer < 0) this.bounceTimer = 0
     }
+    this.idlePhase += (dt / 1000) * 0.8
   }
 
   render(ctx: CanvasRenderingContext2D): void {
@@ -53,27 +56,29 @@ export class PlantEntity implements Entity {
       : 1
 
     const bounceOffsetY = this.bounceTimer > 0
-      ? -12 * Math.sin(this.bounceTimer / 0.2 * Math.PI)
+      ? -12 * Math.sin(this.bounceTimer / 200 * Math.PI)
       : 0
+    const idleOffsetY = Math.sin(this.idlePhase) * 1
+    const totalOffsetY = bounceOffsetY + idleOffsetY
 
     // 植物简笔画 — 宽度由 Lane 按段数计算，直接使用
     const baseColor = PLANT_COLORS[this.plantIndex % PLANT_COLORS.length]
     const plantId = this.plantState?.config.id
-    drawPlant(ctx, this.x, this.y, this.width, this.height, baseColor, alive, bounceOffsetY, plantId)
+    drawPlant(ctx, this.x, this.y, this.width, this.height, baseColor, alive, totalOffsetY, plantId)
 
     // 当前目标高亮边框
     if (this.isCurrentTarget && alive) {
       ctx.globalAlpha = 1.0
       ctx.strokeStyle = '#ffd700'
       ctx.lineWidth = 3
-      ctx.strokeRect(this.x - 2, this.y + bounceOffsetY - 2, this.width + 4, this.height + 4)
+      ctx.strokeRect(this.x - 2, this.y + totalOffsetY - 2, this.width + 4, this.height + 4)
     }
 
     // 血条（残血时显示）
     if (alive && hpRatio < 1) {
       ctx.globalAlpha = 1.0
       const barHeight = 4
-      const barY = this.y + bounceOffsetY + this.height + 4
+      const barY = this.y + totalOffsetY + this.height + 4
       ctx.fillStyle = '#333'
       ctx.fillRect(this.x, barY, this.width, barHeight)
       ctx.fillStyle = '#22cc22'
@@ -87,7 +92,7 @@ export class PlantEntity implements Entity {
     ctx.font = 'bold 12px sans-serif'
     ctx.textAlign = 'center'
     const name = this.plantState?.config.name ?? ''
-    ctx.fillText(name, this.x + this.width / 2, this.y + bounceOffsetY + this.height / 2 + 5)
+    ctx.fillText(name, this.x + this.width / 2, this.y + totalOffsetY + this.height / 2 + 5)
 
     // 字母序列显示在植物上方
     if (this.letters.length > 0) {

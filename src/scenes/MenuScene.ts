@@ -2,6 +2,11 @@
 import type { Scene, InputEvent } from '../engine/types'
 import type { StageDef, DifficultyDef } from '../config/types'
 import type { SaveData } from '../game/SaveDataService'
+import type { ZombieStatus } from '../game/types'
+import { ZombieState } from '../game/types'
+import { drawBattlefield } from './renderers/BattlefieldRenderer'
+import { drawZombie } from './renderers/ZombieRenderer'
+import { drawPlant } from './renderers/PlantRenderer'
 
 type MenuAction = 'continue' | 'select' | 'difficulty' | 'keyboard' | 'reset'
 
@@ -16,6 +21,16 @@ export class MenuScene implements Scene {
   private canvasWidth = 0
   private canvasHeight = 0
   private resetConfirm = false
+  private fadeAlpha = 1
+  private elapsed = 0
+  private scrollX = 0
+  private silhouettes = [
+    { x: 900, y: 280, speed: 15, type: 'normal', walkPhase: 0 },
+    { x: 1100, y: 180, speed: 12, type: 'roadblock', walkPhase: 1.5 },
+    { x: 1300, y: 350, speed: 18, type: 'imp', walkPhase: 3.0 },
+  ]
+  private plantIdlePhase = 0
+  private readonly emptyStatuses: readonly ZombieStatus[] = []
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
@@ -40,18 +55,80 @@ export class MenuScene implements Scene {
   enter(): void {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
+    this.fadeAlpha = 1
+    this.elapsed = 0
   }
 
   exit(): void {}
-  update(_dt: number): void {}
+  update(dt: number): void {
+    const safeDt = Math.min(dt / 1000, 0.1)
+    this.elapsed += safeDt
+    if (this.fadeAlpha > 0) {
+      this.fadeAlpha = Math.max(0, this.fadeAlpha - safeDt / 0.3)
+    }
+
+    // Scroll grass
+    this.scrollX += safeDt * 10
+
+    // Move silhouettes
+    for (let i = 0; i < this.silhouettes.length; i++) {
+      const s = this.silhouettes[i]
+      s.x -= s.speed * safeDt
+      s.walkPhase += safeDt * 3
+      if (s.x < -80) {
+        s.x = this.canvasWidth + 60 + Math.random() * 200
+      }
+    }
+
+    // Plant sway
+    this.plantIdlePhase += safeDt * 1.5
+  }
 
   render(ctx: CanvasRenderingContext2D): void {
     const w = this.canvasWidth
     const h = this.canvasHeight
 
-    // Background
+    // Animated background
     ctx.fillStyle = '#1a1a2e'
     ctx.fillRect(0, 0, w, h)
+
+    // Scrolling grass (looping tiles)
+    ctx.save()
+    ctx.globalAlpha = 0.3
+    const tileW = 800
+    const offsetX = -(this.scrollX % tileW)
+    for (let tx = offsetX; tx < w + tileW; tx += tileW) {
+      ctx.save()
+      ctx.translate(tx, 0)
+      drawBattlefield(ctx, tileW, h, tileW * 0.35)
+      ctx.restore()
+    }
+    ctx.restore()
+
+    // Zombie silhouettes
+    ctx.save()
+    ctx.globalAlpha = 0.15
+    for (let i = 0; i < this.silhouettes.length; i++) {
+      const s = this.silhouettes[i]
+      drawZombie(ctx, s.x, s.y, 40, 60, s.type, '#666666', {
+        flashTimer: 0,
+        walkPhase: s.walkPhase,
+        state: ZombieState.Walking,
+        statuses: this.emptyStatuses,
+        statusCount: 0,
+      })
+    }
+    ctx.restore()
+
+    // Decorative plants — bottom left, swaying
+    ctx.save()
+    ctx.globalAlpha = 0.4
+    const sway1 = Math.sin(this.plantIdlePhase) * 3
+    const sway2 = Math.sin(this.plantIdlePhase + 1.5) * 3
+    drawPlant(ctx, 40, h - 100, 50, 60, '#22cc22', true, sway1, 'peashooter')
+    drawPlant(ctx, 120, h - 90, 45, 55, '#44aaff', true, sway2, 'snowpea')
+    ctx.restore()
+
     ctx.textAlign = 'center'
 
     // Title
@@ -105,6 +182,12 @@ export class MenuScene implements Scene {
         ctx.fillStyle = '#555555'
         ctx.fillText('[R] 重置存档', w / 2, h * 0.88)
       }
+    }
+
+    // Fade-in
+    if (this.fadeAlpha > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${this.fadeAlpha})`
+      ctx.fillRect(0, 0, w, h)
     }
   }
 

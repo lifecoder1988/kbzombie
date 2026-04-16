@@ -27,6 +27,16 @@ export function drawPlant(
   plantId?: string,
 ): void {
   const cy = y + bounceOffsetY
+
+  // Shadow ellipse at plant base
+  ctx.save()
+  ctx.globalAlpha = 0.12
+  ctx.fillStyle = '#000000'
+  ctx.beginPath()
+  ctx.ellipse(x + w / 2, y + h, w * 0.35, 3, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+
   const themeColor = plantId && PLANT_THEME[plantId] ? PLANT_THEME[plantId] : color
   const fillColor = alive ? themeColor : DEAD_TINT
   const alpha = alive ? 1.0 : 0.3

@@ -36,7 +36,7 @@ export class ZombieEntity implements Entity {
   private _state = ZombieState.Walking
   private readonly speed: number
   private readonly chewDps: number
-  private readonly maxHp: number
+  private readonly _maxHp: number
   private _currentHp: number
   private chewTargetX = -Infinity
   private readonly color: string
@@ -53,7 +53,7 @@ export class ZombieEntity implements Entity {
     this.id = params.id
     this.x = params.x
     this.y = params.y
-    this.maxHp = params.hp
+    this._maxHp = params.hp
     this._currentHp = params.hp
     this.speed = params.speed
     this.chewDps = params.chewDps
@@ -65,6 +65,7 @@ export class ZombieEntity implements Entity {
 
   get state(): ZombieState { return this._state }
   get currentHp(): number { return this._currentHp }
+  get maxHp(): number { return this._maxHp }
   get zombieColor(): string { return this.color }
   get zombieType(): string { return this._type }
   get statuses(): readonly ZombieStatus[] { return this._statuses }
@@ -210,7 +211,7 @@ export class ZombieEntity implements Entity {
     const barWidth = this.width
     const barHeight = 4
     const barY = this.y - 8
-    const hpRatio = this._currentHp / this.maxHp
+    const hpRatio = this._currentHp / this._maxHp
     ctx.fillStyle = '#333'
     ctx.fillRect(this.x, barY, barWidth, barHeight)
     ctx.fillStyle = '#ff3333'

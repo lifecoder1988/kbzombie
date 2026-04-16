@@ -21,6 +21,7 @@ export class PlantSelectScene implements Scene {
   private laneSelections: string[][] = []
   private stageIndex = 0
   private levelIndex = 0
+  private fadeAlpha = 1
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
@@ -72,10 +73,15 @@ export class PlantSelectScene implements Scene {
   enter(): void {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
+    this.fadeAlpha = 1
   }
 
   exit(): void {}
-  update(_dt: number): void {}
+  update(dt: number): void {
+    if (this.fadeAlpha > 0) {
+      this.fadeAlpha = Math.max(0, this.fadeAlpha - dt / 300)
+    }
+  }
 
   render(ctx: CanvasRenderingContext2D): void {
     const w = this.canvasWidth
@@ -201,6 +207,11 @@ export class PlantSelectScene implements Scene {
     ctx.font = '13px sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('↑↓切换路线 | 数字键添加植物 | Backspace删除 | Enter开始战斗 | Esc返回', w / 2, h - 16)
+
+    if (this.fadeAlpha > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${this.fadeAlpha})`
+      ctx.fillRect(0, 0, w, h)
+    }
   }
 
   handleInput(event: InputEvent): void {

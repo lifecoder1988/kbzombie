@@ -60,6 +60,11 @@ kbzombie/
 - **不在 update() 里创建对象**。每帧跑 60 次，临时对象会产生 GC 抖动。预分配或对象池复用。
 - **不在 render() 里做计算**。render 只读取状态并绘制，所有计算在 update 里完成。
 - **用 dt 驱动一切运动**。位移 = 速度 × dt，不写"每帧移动 N 像素"。
+- **dt 时间单位约定**。GameLoop 传出的 dt 是**毫秒**（`performance.now()` 差值）。各层约定如下：
+  - **引擎层 / 游戏逻辑层**：接收毫秒 dt。实体内部需要秒的地方自行 `dt / 1000` 转换（如 ZombieEntity、ProjectileEntity）。速度单位是 px/s，计时器单位是 ms。
+  - **VFX 层**：BattleScene 调用 `vfxManager.update(dt / 1000)` 统一转秒。VFX 对象内部全部使用**秒**（DURATION、速度等）。VfxManager 内部对 dt clamp 到 0.1s 防止标签页切换导致的突刺。
+  - **场景层**：fadeAlpha 等动画直接用毫秒 dt 计算（如 `dt / 300` 表示 300ms 淡入）。SettlementScene 和 MenuScene 的复杂动画自行 `dt / 1000` 转秒。
+  - **新增代码时**：明确当前 dt 是毫秒还是秒，不要混用。优先在接收处转换一次，后续统一用一种单位。
 - **状态变更可追溯**。关键状态变更（植物阵亡、连击结算、波次切换）通过事件系统通知，不在各处直接修改。
 - **数值不硬编码**。血量、速度、段数等走 `src/config/` 配置。代码中只有机制逻辑，没有具体数字。布局比例（植物区域占比、间距等）留在代码中，未来由 slot 机制动态计算。
 
@@ -122,6 +127,9 @@ kbzombie/
 - 新增植物视觉：在 `PlantRenderer.ts` 中添加对应 plantId 的绘制分支，同时在 `PLANT_THEME` 中添加专属颜色
 - VFX 效果走 `scenes/VfxManager.ts`（对象池复用），效果类在 `scenes/vfx/` 下，实体内仅保留极简 timer（bounceTimer、flashTimer、walkPhase）
 - BattleManager 通过 `GameEvent` 队列通知视觉层，BattleScene 每帧 `consumeEvents()` 消费并生成 VFX
+- 音效走 `scenes/SoundSynthesizer.ts`（Web Audio API 程序化合成），BattleScene 在 processGameEvent 各分支调用 `this.sound.play()`
+- 新增 VFX 效果：在 `scenes/vfx/` 下创建实现 `VfxObject` 接口的类，BattleScene 中 acquire → init → spawn
+- 场景淡入：各场景 enter() 设 fadeAlpha=1，update 中递减，render 末尾画黑色遮罩
 - 不引入引擎层不需要的游戏概念（引擎不应出现 zombie、plant 等词）
 - 不提前抽象——需要复用时再抽，不预测未来需求
 - 不加 TODO 注释标记未来工作——未来工作在 ROADMAP 里跟踪

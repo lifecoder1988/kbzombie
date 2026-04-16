@@ -16,6 +16,7 @@ export class StageSelectScene implements Scene {
   private canvasHeight = 0
   private cursorStage = 0
   private cursorLevel = 0
+  private fadeAlpha = 1
 
   constructor(switchTo: (name: string) => void) {
     this.switchTo = switchTo
@@ -36,10 +37,15 @@ export class StageSelectScene implements Scene {
   enter(): void {
     this.canvasWidth = typeof window !== 'undefined' ? window.innerWidth : 800
     this.canvasHeight = typeof window !== 'undefined' ? window.innerHeight : 600
+    this.fadeAlpha = 1
   }
 
   exit(): void {}
-  update(_dt: number): void {}
+  update(dt: number): void {
+    if (this.fadeAlpha > 0) {
+      this.fadeAlpha = Math.max(0, this.fadeAlpha - dt / 300)
+    }
+  }
 
   private isStageUnlocked(stageIndex: number): boolean {
     if (!this.saveData) return false
@@ -169,6 +175,11 @@ export class StageSelectScene implements Scene {
       }
 
       y += 10
+    }
+
+    if (this.fadeAlpha > 0) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${this.fadeAlpha})`
+      ctx.fillRect(0, 0, w, h)
     }
   }
 

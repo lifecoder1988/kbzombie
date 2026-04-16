@@ -35,7 +35,11 @@ export class VfxManager {
   }
 
   update(dt: number): void {
-    // Update shake timer
+    // Clamp dt to prevent effects dying instantly on tab-switch spikes
+    // Clamp dt to prevent effects dying instantly on tab-switch spikes
+    const clampedDt = Math.min(dt, 0.1)
+
+    // Update shake timer (uses raw dt — shake can finish instantly on resume)
     if (this.shakeRemaining > 0) {
       this.shakeRemaining -= dt
       if (this.shakeRemaining <= 0) {
@@ -54,7 +58,7 @@ export class VfxManager {
     let writeIdx = 0
     for (let readIdx = 0; readIdx < this.effects.length; readIdx++) {
       const fx = this.effects[readIdx]
-      fx.update(dt)
+      fx.update(clampedDt)
       if (fx.alive) {
         this.effects[writeIdx] = fx
         writeIdx++
@@ -75,7 +79,8 @@ export class VfxManager {
 
   render(ctx: CanvasRenderingContext2D): void {
     for (let i = 0; i < this.effects.length; i++) {
-      this.effects[i].render(ctx)
+      const fx = this.effects[i]
+      fx.render(ctx)
     }
   }
 

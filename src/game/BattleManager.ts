@@ -318,8 +318,9 @@ export class BattleManager {
 
       lane.takeDamage(plantIdx, damage)
 
-      // If that plant just died, reassign chewing zombies in that lane
+      // If that plant just died, emit event and reassign chewing zombies
       if (!lane.getPlantStates()[plantIdx].alive) {
+        this._events.push({ type: 'plantDeath', x: lane.plantPositions[plantIdx], y: lane.laneY, laneIndex: laneIdx })
         this.reassignChewTargetsForLane(laneIdx)
       }
     }
@@ -377,7 +378,7 @@ export class BattleManager {
           z.takeDamage(proj.power)
           proj.onHit(z.id)
 
-          this._events.push({ type: 'zombieHit', x: z.x + z.width / 2, y: z.y + z.height / 2, zombieId: z.id, element: proj.element })
+          this._events.push({ type: 'zombieHit', x: z.x + z.width / 2, y: z.y + z.height / 2, zombieId: z.id, element: proj.element, damage: proj.power })
 
           // Apply element effects
           this.applyElementEffect(proj.element, z, params)
@@ -385,7 +386,7 @@ export class BattleManager {
           if (!z.active) {
             this.processedInWave++
             this.stats.recordKill()
-            this._events.push({ type: 'zombieDeath', x: z.x, y: z.y, width: z.width, height: z.height, color: z.zombieColor })
+            this._events.push({ type: 'zombieDeath', x: z.x, y: z.y, width: z.width, height: z.height, color: z.zombieColor, hp: z.maxHp })
           }
 
           // Handle impact type

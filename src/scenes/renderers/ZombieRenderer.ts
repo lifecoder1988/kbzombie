@@ -16,6 +16,16 @@ export function drawZombie(
   },
 ): void {
   const { flashTimer, walkPhase, state, statuses, statusCount } = options
+
+  // Shadow ellipse at zombie base
+  ctx.save()
+  ctx.globalAlpha = 0.12
+  ctx.fillStyle = '#000000'
+  ctx.beginPath()
+  ctx.ellipse(x + w / 2, y + h, w * 0.35, 3, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+
   const flash = flashTimer > 0
 
   // Layout constants relative to bounding box
