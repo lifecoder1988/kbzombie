@@ -9,7 +9,6 @@ type PlantSelectAction = 'start' | 'back'
 
 export class PlantSelectScene implements Scene {
   readonly name = 'plantSelect'
-  private switchTo: (name: string) => void
   private onAction: ((action: PlantSelectAction, lanePlants: readonly (readonly string[])[]) => void) | null = null
 
   private canvasWidth = 0
@@ -23,8 +22,8 @@ export class PlantSelectScene implements Scene {
   private levelIndex = 0
   private fadeAlpha = 1
 
-  constructor(switchTo: (name: string) => void) {
-    this.switchTo = switchTo
+  constructor(_switchTo: (name: string) => void) {
+    // switchTo stored for interface compatibility
   }
 
   setActionHandler(fn: (action: PlantSelectAction, lanePlants: readonly (readonly string[])[]) => void): void {

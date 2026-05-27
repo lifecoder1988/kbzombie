@@ -3,9 +3,9 @@ import { PlantChain } from '../PlantChain'
 import type { PlantConfig } from '../types'
 
 const TEST_PLANTS: PlantConfig[] = [
-  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100 },
-  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80 },
-  { id: 'repeater', name: '双发射手', comboSegment: 8, attackPower: 35, hp: 120 },
+  { id: 'peashooter', name: '豌豆射手', comboSegment: 4, attackPower: 20, hp: 100, element: 'normal', spread: 'single', flight: 'straight', impact: 'vanish' },
+  { id: 'snow_pea', name: '寒冰射手', comboSegment: 4, attackPower: 15, hp: 80, element: 'ice', spread: 'single', flight: 'straight', impact: 'vanish' },
+  { id: 'repeater', name: '双发射手', comboSegment: 8, attackPower: 35, hp: 120, element: 'normal', spread: 'burst', flight: 'straight', impact: 'vanish' },
 ]
 
 describe('PlantChain', () => {

@@ -211,7 +211,7 @@ function drawShooterHead(ctx: CanvasRenderingContext2D, cx: number, cy: number, 
 function drawTorchwoodHead(
   ctx: CanvasRenderingContext2D, cx: number, cy: number, hw: number, hh: number,
   color: string, alive: boolean,
-  stemX: number, stemW: number, _stemY: number, _stemH: number, w: number,
+  _stemX: number, _stemW: number, _stemY: number, _stemH: number, w: number,
 ): void {
   // Thick trunk instead of thin stem — draw over it
   const trunkW = w * 0.35
@@ -244,7 +244,7 @@ function drawTorchwoodHead(
 
 function drawCactusHead(
   ctx: CanvasRenderingContext2D, cx: number, cy: number, hw: number, hh: number,
-  color: string, alive: boolean, x: number, w: number, bodyY: number, bodyH: number,
+  color: string, alive: boolean, _x: number, _w: number, _bodyY: number, _bodyH: number,
 ): void {
   // Tall oval body
   const cactusH = hh * 1.3
@@ -346,7 +346,7 @@ function drawKernelPultHead(ctx: CanvasRenderingContext2D, cx: number, cy: numbe
 function drawFumeShroomHead(
   ctx: CanvasRenderingContext2D, cx: number, cy: number, hw: number, hh: number,
   color: string, alive: boolean,
-  _stemX: number, _stemW: number, _stemY: number, _stemH: number, _w: number, bodyY: number, bodyH: number,
+  _stemX: number, _stemW: number, _stemY: number, _stemH: number, _w: number, _bodyY: number, _bodyH: number,
 ): void {
   // Mushroom cap (wide dome)
   const capW = hw * 1.2
@@ -379,7 +379,6 @@ function drawCattailHead(ctx: CanvasRenderingContext2D, cx: number, cy: number, 
 
   // Cat ears (triangles on top)
   ctx.fillStyle = color
-  const earW = hw * 0.2
   const earH = hh * 0.35
   // Left ear
   ctx.beginPath()

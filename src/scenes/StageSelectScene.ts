@@ -7,7 +7,6 @@ type SelectAction = 'play' | 'back'
 
 export class StageSelectScene implements Scene {
   readonly name = 'stageSelect'
-  private switchTo: (name: string) => void
   private onAction: ((action: SelectAction, stageIndex: number, levelIndex: number) => void) | null = null
   private stages: readonly StageDef[] = []
   private saveData: SaveData | null = null
@@ -18,8 +17,8 @@ export class StageSelectScene implements Scene {
   private cursorLevel = 0
   private fadeAlpha = 1
 
-  constructor(switchTo: (name: string) => void) {
-    this.switchTo = switchTo
+  constructor(_switchTo: (name: string) => void) {
+    // switchTo stored for interface compatibility
   }
 
   setActionHandler(fn: (action: SelectAction, stageIndex: number, levelIndex: number) => void): void {

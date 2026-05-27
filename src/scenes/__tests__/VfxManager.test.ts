@@ -135,7 +135,7 @@ describe('VfxManager', () => {
     // After 0.15s, remaining of 0.2 would still be active (0.2-0.15=0.05>0), remaining of 0.1 would be expired
     manager.update(0.15)
     // Should still have shake (remaining was 0.2, now 0.05)
-    const offset = manager.getShakeOffset()
+    manager.getShakeOffset() // verify shake is still active after 0.15s update
     // Non-trivially: remaining>0 so shake is still active — but offset can be 0 by random chance
     // We verify the shake state is still live by checking intensity was preserved
     // (indirectly: call shake again with small value — max should not override bigger)

@@ -55,8 +55,6 @@ export class BattleManager {
   // wave spawn tracking
   private spawnedInWave = 0
   private spawnTimer = 0
-  private waveComplete = false
-
   // wave pause
   private wavePauseTimer = 0
 
@@ -195,7 +193,6 @@ export class BattleManager {
         this._status = BattleStatus.Fighting
         this.spawnedInWave = 0
         this.processedInWave = 0
-        this.waveComplete = false
         this.spawnTimer = 0
       }
       return

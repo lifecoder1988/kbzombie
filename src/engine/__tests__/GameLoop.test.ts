@@ -1,5 +1,5 @@
 // src/engine/__tests__/GameLoop.test.ts
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { GameLoop } from '../GameLoop'
 import type { GameLoopTarget } from '../GameLoop'
 

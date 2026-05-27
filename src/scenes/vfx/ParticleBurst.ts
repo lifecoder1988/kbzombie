@@ -16,8 +16,6 @@ export class ParticleBurst implements VfxObject {
   alive = true
   _poolType?: string
 
-  private originX = 0
-  private originY = 0
   private count = 0
   private color = '#ffd700'
   private duration = 0.5
@@ -29,8 +27,6 @@ export class ParticleBurst implements VfxObject {
   }))
 
   init(x: number, y: number, count: number, color: string, duration: number): void {
-    this.originX = x
-    this.originY = y
     this.count = Math.min(count, MAX_PARTICLES)
     this.color = color
     this.duration = duration

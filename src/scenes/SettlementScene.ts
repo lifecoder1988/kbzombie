@@ -39,7 +39,6 @@ function bounceEase(t: number): number {
 
 export class SettlementScene implements Scene {
   readonly name = 'settlement'
-  private switchTo: (name: string) => void
   private onAction: ((action: SettlementAction, stageIndex: number, levelIndex: number) => void) | null = null
   private params: SettlementSceneParams | null = null
   private canvasWidth = 0
@@ -53,8 +52,8 @@ export class SettlementScene implements Scene {
   private buttonsStart = 0
   private totalRevealTime = 0
 
-  constructor(switchTo: (name: string) => void) {
-    this.switchTo = switchTo
+  constructor(_switchTo: (name: string) => void) {
+    // switchTo stored for interface compatibility
   }
 
   setActionHandler(fn: (action: SettlementAction, stageIndex: number, levelIndex: number) => void): void {

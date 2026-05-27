@@ -12,12 +12,10 @@ type MenuAction = 'continue' | 'select' | 'difficulty' | 'keyboard' | 'reset'
 
 export class MenuScene implements Scene {
   readonly name = 'menu'
-  private switchTo: (name: string) => void
   private onAction: ((action: MenuAction) => void) | null = null
   private stages: readonly StageDef[] = []
   private saveData: SaveData | null = null
   private difficulties: Readonly<Record<string, DifficultyDef>> = {}
-  private difficultyOrder: readonly string[] = []
   private canvasWidth = 0
   private canvasHeight = 0
   private resetConfirm = false
@@ -32,8 +30,8 @@ export class MenuScene implements Scene {
   private plantIdlePhase = 0
   private readonly emptyStatuses: readonly ZombieStatus[] = []
 
-  constructor(switchTo: (name: string) => void) {
-    this.switchTo = switchTo
+  constructor(_switchTo: (name: string) => void) {
+    // switchTo stored for interface compatibility
   }
 
   setActionHandler(fn: (action: MenuAction) => void): void {
@@ -44,12 +42,11 @@ export class MenuScene implements Scene {
     stages: readonly StageDef[],
     saveData: SaveData,
     difficulties: Readonly<Record<string, DifficultyDef>>,
-    difficultyOrder: readonly string[],
+    _difficultyOrder: readonly string[],
   ): void {
     this.stages = stages
     this.saveData = saveData
     this.difficulties = difficulties
-    this.difficultyOrder = difficultyOrder
   }
 
   enter(): void {
